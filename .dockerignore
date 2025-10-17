@@ -1,0 +1,66 @@
+# Sensitive files
+.env
+.env.*
+appsettings.Development.json
+appsettings.Local.json
+*.pfx
+*.p12
+*.key
+*.pem
+
+# .NET build artifacts
+**/bin/
+**/obj/
+**/out/
+**/TestResults/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# Riders
+.idea/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# GitHub
+.github/
+
+# Documentation
+README.md
+*.md
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+*.coverage
+*.coveragexml
+
+# Temporary files
+*.tmp
+*.temp

@@ -1,0 +1,54 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+tab_width = 2
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 160
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+
+# IDE0007
+csharp_style_var_for_built_in_types = true
+# IDE0008
+chasrp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = true
+# IDE0022
+csharp_style_expression_bodied_methods = when_on_single_line
+# IDE0046
+dotnet_diagnostic.IDE0046.severity = suggestion
+# IDE0160
+dotnet_diagnostic.IDE0160.severity = none
+# IDE0161
+csharp_style_namespace_declarations = file_scoped
+dotnet_diagnostic.IDE0161.severity = error
+
+# CA2007: Do not directly await without ConfigureAwait
+dotnet_diagnostic.CA2007.severity = none
+
+# CA1051: Do not declare visible instance fields
+dotnet_diagnostic.CA1051.severity = none
+
+# XML docs (not needed for internal API dev)
+dotnet_diagnostic.CS1591.severity = none
+
+# Design rules that are library-specific
+dotnet_diagnostic.CA1707.severity = none   # Identifiers should not contain underscores
+dotnet_diagnostic.CA2211.severity = none   # Non-constant fields should not be visible
+dotnet_diagnostic.CA2227.severity = none 
+
+dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1000.severity = none
+dotnet_diagnostic.CA1031.severity = none
+dotnet_diagnostic.CA1869.severity = none
+dotnet_diagnostic.CA1056.severity = none
+dotnet_diagnostic.CA1848.severity = none
+
+[*.{csproj,json,js]
+indent_size = 2
+
+dotnet_diagnostic.SYSLIB0001.severity = none
