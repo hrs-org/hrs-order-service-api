@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using HRS.Domain.Enums;
 
 namespace HRS.Domain.Interfaces;
 
@@ -12,4 +13,5 @@ public interface ICrudMongoDBRepository<T> where T : class
     Task UpdateAsync(T entity, object id);
     Task RemoveAsync(object id);
     Task RemoveRangeAsync(IEnumerable<object> ids);
+    Task UpdateStatusByOrderIdAsync(int orderId, RentalStatus status);
 }

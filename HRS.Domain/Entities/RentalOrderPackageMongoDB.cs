@@ -1,3 +1,4 @@
+using HRS.Domain.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System.Collections.Generic;
@@ -11,17 +12,17 @@ public class RentalOrderPackageMongoDB
     public string Id { get; set; } = null!;
 
     [BsonRepresentation(BsonType.ObjectId)]
-    public string RentalOrderId { get; set; } = null!;
+    public int RentalOrderId { get; set; } 
 
-    public string RentalOrderStatus { get; set; } = null!; // "Booked" / "Rented"
+    public RentalStatus RentalOrderStatus { get; set; } = RentalStatus.Pending;
     public DateTime RentalOrderStartDate { get; set; }
     public DateTime RentalOrderEndDate { get; set; }
-    
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string? PackageId { get; set; }
 
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? PackageRateId { get; set; }
+    public int? PackageId { get; set; }
+
+    [BsonRepresentation(BsonType.ObjectId)]
+    public int? PackageRateId { get; set; }
 
     public string PackageNameSnapshot { get; set; } = null!;
     public decimal DailyRateSnapshot { get; set; }

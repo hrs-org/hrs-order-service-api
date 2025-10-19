@@ -40,7 +40,7 @@ public class RentalOrderController : ControllerBase
     {
         var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled, RentalStatus.PendingPayment };
 
-        var result = await _rentalOrderService.GetByStasusesAsync(bookingStatuses);
+        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
@@ -50,7 +50,7 @@ public class RentalOrderController : ControllerBase
     {
         var rentStatuses = new[] { RentalStatus.Rented };
 
-        var result = await _rentalOrderService.GetByStasusesAsync(rentStatuses);
+        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
@@ -108,5 +108,18 @@ public class RentalOrderController : ControllerBase
     {
         var result = await _rentalOrderService.CloseAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order closed successfully"));
+    }
+
+    [HttpPost("/api/orders/assign-stripe-sessionid")]
+    [Authorize(Roles = "Employee,Manager,Admin")]
+    public async Task<ActionResult<RentalOrderResponseDto>> AssignStripeSessionId([FromBody] AssignStripeSessionRequest request)
+    {
+        var id = request.OrderId;
+        var sessionId = request.SessionId;
+    {
+        await _rentalOrderService.AssignStripeSessionIdAsync(id, sessionId);
+        return Ok(ApiResponse<string>.OkResponse("Stripe Session ID assigned successfully"));
+    }
+
     }
 }

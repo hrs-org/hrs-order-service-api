@@ -62,7 +62,7 @@ public class RentalOrderControllerTests
                 PaymentType = null!
             }
         };
-        _service.GetByStasusesAsync(Arg.Any<RentalStatus[]>()).Returns(bookings);
+        _service.GetByStatusesAsync(Arg.Any<RentalStatus[]>()).Returns(bookings);
         var result = await _controller.GetAllBookings();
         var okResult = result.Result as OkObjectResult;
         okResult.Should().NotBeNull();
@@ -83,7 +83,7 @@ public class RentalOrderControllerTests
                 PaymentType = null!
             }
         };
-        _service.GetByStasusesAsync(Arg.Any<RentalStatus[]>()).Returns(rents);
+        _service.GetByStatusesAsync(Arg.Any<RentalStatus[]>()).Returns(rents);
         var result = await _controller.GetAllRents();
         var okResult = result.Result as OkObjectResult;
         okResult.Should().NotBeNull();

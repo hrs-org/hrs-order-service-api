@@ -14,13 +14,13 @@ public class RentalOrderItemMongoDBRepository : CrudMongoDBRepository<RentalOrde
         _items = db.GetCollection<RentalOrderItemMongoDB>("RentalOrderItemMongoDBs");
     }
 
-    public async Task<int> GetReservedQuantityAsync(string itemId, DateTime startDate, DateTime endDate)
+    public async Task<int> GetReservedQuantityAsync(int itemId, DateTime startDate, DateTime endDate)
     {
         var filter = Builders<RentalOrderItemMongoDB>.Filter.And(
                 Builders<RentalOrderItemMongoDB>.Filter.Eq(i => i.ItemId, itemId),
                 Builders<RentalOrderItemMongoDB>.Filter.Or(
-                    Builders<RentalOrderItemMongoDB>.Filter.Eq(i => i.RentalOrderStatus, "Booked"),
-                    Builders<RentalOrderItemMongoDB>.Filter.Eq(i => i.RentalOrderStatus, "Rented")
+                    Builders<RentalOrderItemMongoDB>.Filter.Eq(i => i.RentalOrderStatus, RentalStatus.Booked),
+                    Builders<RentalOrderItemMongoDB>.Filter.Eq(i => i.RentalOrderStatus, RentalStatus.Rented)
                 ),
                 Builders<RentalOrderItemMongoDB>.Filter.Lte(i => i.RentalOrderStartDate, endDate),
                 Builders<RentalOrderItemMongoDB>.Filter.Gte(i => i.RentalOrderEndDate, startDate)

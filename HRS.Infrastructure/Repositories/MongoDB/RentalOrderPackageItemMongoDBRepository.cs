@@ -15,7 +15,7 @@ public class RentalOrderPackageItemMongoDBRepository : CrudMongoDBRepository<Ren
             _packages = db.GetCollection<RentalOrderPackageMongoDB>("RentalOrderPackages");
         }
 
-    public async Task<int> GetReservedQuantityFromPackagesAsync(string itemId, DateTime startDate, DateTime endDate)
+    public async Task<int> GetReservedQuantityFromPackagesAsync(int itemId, DateTime startDate, DateTime endDate)
         {
             // filter packages that contain the item and order is booked/rented during the period
             var filter = Builders<RentalOrderPackageMongoDB>.Filter.ElemMatch(
@@ -29,7 +29,7 @@ public class RentalOrderPackageItemMongoDBRepository : CrudMongoDBRepository<Ren
 
             foreach (var package in packages)
             {
-                if ((package.RentalOrderStatus == "Booked" || package.RentalOrderStatus == "Rented") &&
+                if ((package.RentalOrderStatus == RentalStatus.Booked || package.RentalOrderStatus == RentalStatus.Rented) &&
                     package.RentalOrderStartDate <= endDate && package.RentalOrderEndDate >= startDate)
                     {
                      totalReserved += package.Items

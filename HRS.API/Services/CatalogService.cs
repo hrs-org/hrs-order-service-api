@@ -85,7 +85,7 @@ public class CatalogService : ICatalogService
     {
 
         // var packages = await _packageRepository.GetAllAsync();
-        var response = await _itemClient.GetFromJsonAsync<List<PackageResponseDto>>("/api/package/getall"); // Adjust the endpoint as necessary
+        var response = await _itemClient.GetFromJsonAsync<List<PackageResponseDto>>("/api/package"); // Adjust the endpoint as necessary
         if (response == null || response.Count == 0)
             throw new InvalidOperationException("Failed to retrieve packages from Item Service.");
         var packages = response;
@@ -94,7 +94,9 @@ public class CatalogService : ICatalogService
         foreach (var pkg in packages)
         {   // var pkgWithItems = await _packageRepository.GetByIdWithItemsAsync(pkg.Id);
             var pkgWithItems = await _itemClient.GetFromJsonAsync<PackageResponseDto>($"/api/package/getbyidwithitems/{pkg.Id}"); // Adjust the endpoint as necessary
-            if (pkgWithItems == null || pkgWithItems.Items == null || pkgWithItems.Items.Count == 0) throw new InvalidOperationException($"Package with ID {pkg.Id} not found. Or it has no items.");
+            if (pkgWithItems == null || pkgWithItems.Items == null || pkgWithItems.Items.Count == 0)
+                continue;
+            //  throw new InvalidOperationException($"Package with ID {pkg.Id} not found. Or it has no items.");
 
             var pkgRate = await ResolvePackageDailyRateAsync(pkgWithItems, rentalDays);
 
@@ -168,7 +170,8 @@ public class CatalogService : ICatalogService
         var rate = response;
         if (rate != null)
             return rate.DailyRate;
-        var itemResponse = await _itemClient.GetFromJsonAsync<ItemResponseDto>($"/api/item/getbyidwithchildren/{item.Id}"); // Adjust the endpoint as necessary
+        // ******** need to create new massage to get parent with children id ********
+        var itemResponse = await _itemClient.GetFromJsonAsync<ItemResponseDto>($"/api/item/getparentbychildentid/{item.Id}"); // Adjust the endpoint as necessary
         var ParentId = itemResponse?.Id;
         if (ParentId.HasValue)
         {

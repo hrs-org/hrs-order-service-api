@@ -23,6 +23,7 @@ public class RentalOrder
     [Required] public RentalStatus Status { get; set; } = RentalStatus.Pending;
     [Required] public OrderChannel Channel { get; set; } = OrderChannel.Online;
     [Required] public OrderPaymentType PaymentType { get; set; } = OrderPaymentType.Other;
+    public string? PaymentId { get; set; }
     public int? ApprovedById { get; set; }
     // [ForeignKey(nameof(ApprovedById))] public User ApprovedBy { get; set; }
     public DateTime? ApprovedAt { get; set; }

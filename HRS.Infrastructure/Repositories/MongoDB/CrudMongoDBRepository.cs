@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using HRS.Domain.Enums;
 using HRS.Domain.Interfaces;
 using MongoDB.Driver;
 
@@ -36,4 +37,7 @@ public class CrudMongoDBRepository<T> : ICrudMongoDBRepository<T> where T : clas
 
     public async Task RemoveRangeAsync(IEnumerable<object> ids) =>
         await _collection.DeleteManyAsync(Builders<T>.Filter.In("Id", ids));
+
+    public async Task UpdateStatusByOrderIdAsync(int orderId, RentalStatus status) =>
+        await _collection.UpdateManyAsync(Builders<T>.Filter.Eq("RentalOrderId", orderId), Builders<T>.Update.Set("RentalOrderStatus", status));
 }
