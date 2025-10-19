@@ -1,41 +1,58 @@
 using System.Security.Claims;
-using AutoMapper;
-using HRS.API.Contracts.DTOs.User;
-using HRS.API.Services.Interfaces;
-using HRS.Domain.Entities;
-using HRS.Domain.Interfaces;
+using HRS.Shared.Core.Dtos;
+using HRS.Shared.Core.Interfaces;
 
 namespace HRS.API.Services;
 
 public class UserContextService : IUserContextService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IMapper _mapper;
-    private readonly IUserRepository _userRepository;
 
-    public UserContextService(IHttpContextAccessor httpContextAccessor, IUserRepository userRepository, IMapper mapper)
+    public UserContextService(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
-        _userRepository = userRepository;
-        _mapper = mapper;
     }
 
-    public async Task<User> GetUserAsync()
+    public string? GetEmail()
     {
-        var principal = _httpContextAccessor.HttpContext?.User;
-        if (principal?.Identity?.IsAuthenticated != true) throw new UnauthorizedAccessException("User is not authenticated");
-
-        var id = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        var userIdAvailable = int.TryParse(id, out var userId);
-
-        if (!userIdAvailable) throw new UnauthorizedAccessException("User ID claim not found");
-
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        return user ?? throw new UnauthorizedAccessException("User not found");
+        return _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value;
     }
 
-    public async Task<UserDto> GetUserDtoAsync() => _mapper.Map<UserDto>(await GetUserAsync());
+    public int GetUserId()
+    {
+        var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value
+                         ?? _httpContextAccessor.HttpContext?.User?.FindFirst("userId")?.Value;
 
-    public async Task<int> GetUserIdAsync() => (await GetUserAsync()).Id;
+        return int.TryParse(userIdClaim, out var userId) ? userId : 0;
+    }
+
+    public Task<UserResponseDto> GetUserAsync()
+    {
+        var userId = GetUserId();
+        var email = GetEmail();
+        var firstName = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.GivenName)?.Value
+                       ?? _httpContextAccessor.HttpContext?.User?.FindFirst("firstName")?.Value
+                       ?? "Unknown";
+        var lastName = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Surname)?.Value
+                      ?? _httpContextAccessor.HttpContext?.User?.FindFirst("lastName")?.Value
+                      ?? "User";
+        var role = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value
+                  ?? _httpContextAccessor.HttpContext?.User?.FindFirst("role")?.Value
+                  ?? "User";
+
+        // Create a user DTO from claims
+        var user = new UserResponseDto
+        {
+            Id = userId,
+            Email = email ?? "unknown@example.com",
+            FirstName = firstName,
+            LastName = lastName,
+            Role = role
+        };
+
+        return Task.FromResult(user);
+    }
+
+    Task<UserResponseDto> IUserContextService.GetUserAsync() => throw new NotImplementedException();
 }

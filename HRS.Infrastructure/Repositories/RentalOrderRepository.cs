@@ -15,16 +15,16 @@ public class RentalOrderRepository : CrudRepository<RentalOrder>, IRentalOrderRe
     {
         return await _dbSet
             .Include(o => o.RentalOrderItems)
-            .ThenInclude(i => i.Item)
+            // .ThenInclude(i => i.Item)
             .Include(o => o.RentalOrderItems)
-            .ThenInclude(i => i.ItemRate)
+            // .ThenInclude(i => i.ItemRate)
             .Include(o => o.RentalOrderPackages)
             .ThenInclude(p => p.Items)
-            .ThenInclude(pi => pi.Item)
+            // .ThenInclude(pi => pi.Item)
             .Include(o => o.RentalOrderPackages)
-            .ThenInclude(p => p.Package)
+            // .ThenInclude(p => p.Package)
             .Include(o => o.RentalOrderPackages)
-            .ThenInclude(p => p.PackageRate)
+            // .ThenInclude(p => p.PackageRate)
             .FirstOrDefaultAsync(o => o.Id == id);
     }
 
@@ -32,18 +32,18 @@ public class RentalOrderRepository : CrudRepository<RentalOrder>, IRentalOrderRe
     {
         return await _dbSet
             .Where(ro => statuses.Contains(ro.Status))
-            .Include(o => o.Customer)
+            // .Include(o => o.Customer)
             .Include(o => o.RentalOrderItems)
-            .ThenInclude(i => i.Item)
+            // .ThenInclude(i => i.Item)
             .Include(o => o.RentalOrderItems)
-            .ThenInclude(i => i.ItemRate)
+            // .ThenInclude(i => i.ItemRate)
             .Include(o => o.RentalOrderPackages)
             .ThenInclude(p => p.Items)
-            .ThenInclude(pi => pi.Item)
+            // .ThenInclude(pi => pi.Item)
             .Include(o => o.RentalOrderPackages)
-            .ThenInclude(p => p.Package)
+            // .ThenInclude(p => p.Package)
             .Include(o => o.RentalOrderPackages)
-            .ThenInclude(p => p.PackageRate)
+            // .ThenInclude(p => p.PackageRate)
             .ToListAsync();
     }
 

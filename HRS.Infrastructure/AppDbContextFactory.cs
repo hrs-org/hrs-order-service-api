@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Driver;
 
 namespace HRS.Infrastructure;
 
@@ -16,14 +17,15 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = config.GetConnectionString("DefaultConnection");
+        var connectionString = config.GetConnectionString("DefaultConnectionm");
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsBuilder.UseMySql(
             connectionString,
-            ServerVersion.AutoDetect(connectionString),
+            Microsoft.EntityFrameworkCore.ServerVersion.AutoDetect(connectionString),
             b => b.MigrationsAssembly("HRS.Migrations")
         );
+
 
         return new AppDbContext(optionsBuilder.Options);
     }
