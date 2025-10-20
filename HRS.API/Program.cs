@@ -4,10 +4,6 @@ using HRS.API.Filters;
 using HRS.API.Middleware;
 using HRS.API.Services;
 using HRS.API.Services.Interfaces;
-using HRS.API.Validators.Auth;
-using HRS.API.Validators.Item;
-using HRS.API.Validators.Maintenance;
-using HRS.API.Validators.Payment;
 using HRS.API.Validators.Rental;
 using HRS.Domain.Interfaces;
 using HRS.Infrastructure;
@@ -35,15 +31,8 @@ builder.Services.AddHttpContextAccessor();
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); });
-builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestDtoValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<AddItemRequestDtoValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<UpdateItemRequestDtoValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<ChangePasswordRequestDtoValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<RentalOrderRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<ReturnRentalOrderRequestValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<PaymentRequestDtoValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<VerifyPaymentRequestDtoValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<ItemMaintenanceRequestDtoValidator>();
 ////////////////
 builder.Services.AddHttpClient("ItemMaintenanceService", client =>
 {
@@ -68,17 +57,17 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
         ?? throw new InvalidOperationException("Missing MongoDB connection string.");
     return new MongoClient(connectionString);
 });
+
 builder.Services.AddScoped<IMongoDatabase>(sp =>
 {
     var client = sp.GetRequiredService<IMongoClient>();
-    var databaseName = builder.Configuration["MongoDB:DatabaseName"];
+    var databaseName = builder.Configuration["MongoDB:DatabaseName"]
+        ?? throw new InvalidOperationException("Missing MongoDB:DatabaseName in configuration.");
     return client.GetDatabase(databaseName);
 });
 // MongoContext
 builder.Services.AddSingleton<MongoContext>();
-builder.Services.AddScoped<IRentalOrderItemMongoDBRepository, RentalOrderItemMongoDBRepository>();
-builder.Services.AddScoped<IRentalOrderPackageItemMongoDBRepository, RentalOrderPackageItemMongoDBRepository>();
-builder.Services.AddScoped<IRentalOrderPackageMongoDBRepository, RentalOrderPackageMongoDBRepository>();
+builder.Services.AddScoped<IRentalOrderMongoDBRepository, RentalOrderMongoDBRepository>();
 builder.Services.AddScoped(typeof(ICrudMongoDBRepository<>), typeof(CrudMongoDBRepository<>));
 
 

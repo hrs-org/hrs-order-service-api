@@ -6,7 +6,7 @@ namespace HRS.API.Services.Interfaces;
 
 public interface IRentalOrderService
 {
-    Task<RentalOrderResponseDto> GetAsync(int id);
+    Task<RentalOrderResponseDto> GetAsync(string id);
     Task<IEnumerable<RentalOrderListDto>> GetAllAsync();
     Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses);
     Task<RentalOrderResponseDto> CreateAsync(CreateRentalOrderRequestDto dto);
@@ -17,5 +17,5 @@ public interface IRentalOrderService
     Task<RentalOrderResponseDto> MarkAsRentedAsync(int id);
     Task<RentalOrderResponseDto> ReturnAsync(int id, ReturnRentalOrderRequestDto dto);
     Task<RentalOrderResponseDto> CloseAsync(int id);
-    Task<RentalOrder> testcreatDB(int CustomerId, string GuestName, string GuestEmail, string GuestPhone, decimal totalAmount);
+
 }

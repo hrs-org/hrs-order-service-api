@@ -9,7 +9,6 @@ public class RentalOrder
 {
     [Key] public int Id { get; set; }
     public int? CustomerId { get; set; }
-    // [ForeignKey(nameof(CustomerId))] public User? Customer { get; set; }
     [MaxLength(150)] public string? GuestName { get; set; }
     [MaxLength(50)] public string? GuestPhone { get; set; }
     [MaxLength(150)] public string? GuestEmail { get; set; }
@@ -25,21 +24,16 @@ public class RentalOrder
     [Required] public OrderPaymentType PaymentType { get; set; } = OrderPaymentType.Other;
     public string? PaymentId { get; set; }
     public int? ApprovedById { get; set; }
-    // [ForeignKey(nameof(ApprovedById))] public User ApprovedBy { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public int? ReturnedById { get; set; }
-    // [ForeignKey(nameof(ReturnedById))] public User? ReturnedBy { get; set; }
     public DateTime? ReturnedAt { get; set; }
     public int? ClosedById { get; set; }
-    // [ForeignKey(nameof(ClosedById))] public User? ClosedBy { get; set; }
     public DateTime? ClosedAt { get; set; }
     public bool HasIssues { get; set; }
     public int ItemsGoodCount { get; set; }
     public int ItemsIssueCount { get; set; }
     public string? ReturnRemarks { get; set; }
     public string? StripeSessionId { get; set; }
-    public ICollection<RentalOrderItemMongoDB> RentalOrderItems { get; set; } = [];
-    public ICollection<RentalOrderPackageMongoDB> RentalOrderPackages { get; set; } = [];
     public int CreatedById { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedById { get; set; }

@@ -15,7 +15,5 @@ public class MongoContext
 
     public IMongoDatabase Database => _database;
 
-    public IMongoCollection<RentalOrderPackageItemMongoDB> RentalOrderPackageItemMongoDBs => _database.GetCollection<RentalOrderPackageItemMongoDB>("RentalOrderPackageItems");
-    public IMongoCollection<RentalOrderItemMongoDB> RentalOrderItemMongoDBs => _database.GetCollection<RentalOrderItemMongoDB>("RentalOrderItems");
-    public IMongoCollection<RentalOrderPackageMongoDB> RentalOrderPackageMongoDBs => _database.GetCollection<RentalOrderPackageMongoDB>("RentalOrderPackages");
+    public IMongoCollection<RentalOrderMongoDB> RentalOrderMongoDBs => _database.GetCollection<RentalOrderMongoDB>("RentalOrders");
 }

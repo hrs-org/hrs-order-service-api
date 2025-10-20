@@ -21,7 +21,7 @@ public class CatalogController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<CatalogResponseDto>> GetAvailability([FromQuery] GetCatalogRequestDto request)
     {
-        var result = await _catalogService.GetStoreAvailabilityAsync(request.StartDate, request.EndDate);
+        var result = await _catalogService.GetStoreAvailabilityAsync(request.StartDate, request.EndDate, request.StoreId);
         return Ok(ApiResponse<CatalogResponseDto>.OkResponse(result));
     }
 }

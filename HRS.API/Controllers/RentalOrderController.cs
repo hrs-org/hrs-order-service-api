@@ -21,7 +21,7 @@ public class RentalOrderController : ControllerBase
 
     [HttpGet("{id:int}")]
     // [Authorize]
-    public async Task<ActionResult<RentalOrderResponseDto>> GetById(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> GetById(string id)
     {
         var result = await _rentalOrderService.GetAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result));
@@ -65,9 +65,11 @@ public class RentalOrderController : ControllerBase
 
     [HttpPut("{id:int}/approve-payment")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> ApprovePayment(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> ApprovePayment([FromBody] ApprovePaymentRequest request)
     {
-        var result = await _rentalOrderService.ApproveAsync(id);
+        var id = request.SessionId;
+        var amount = request.Amount;
+        var result = await _rentalOrderService.ApprovePaymentAsync(id, amount);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order approved successfully"));
     }
 
@@ -124,12 +126,4 @@ public class RentalOrderController : ControllerBase
 
     }
 
-    [HttpPost("/api/orders/testdb")]
-    // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> TestDatabase( int CustomerId , string GuestName , string GuestEmail , string GuestPhone,int totalAmount)
-    {
-        var newdata = await _rentalOrderService.testcreatDB( CustomerId , GuestName , GuestEmail , GuestPhone , totalAmount);
-        return Ok(ApiResponse<RentalOrder>.OkResponse(newdata, "Test successful"));
-
-    }
 }

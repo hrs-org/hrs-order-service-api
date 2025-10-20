@@ -80,4 +80,8 @@ public class UserContextService : IUserContextService
 
         return Task.FromResult(user);
     }
+    public int GetStoreId()
+    {
+        return int.Parse(_httpContextAccessor.HttpContext?.User?.FindFirst("storeId")?.Value ?? "0");
+    }
 }

@@ -27,9 +27,6 @@ public class RentalOrderConfiguration : IEntityTypeConfiguration<RentalOrder>
             builder.HasIndex(e => e.Channel);
             builder.HasIndex(e => e.StripeSessionId);
 
-            // Ignore MongoDB collections in EF Core mapping
-            builder.Ignore(e => e.RentalOrderItems);      // If you want EF Core to ignore MongoDB version
-            builder.Ignore(e => e.RentalOrderPackages);   // If you want EF Core to ignore MongoDB version
         }
 }
 

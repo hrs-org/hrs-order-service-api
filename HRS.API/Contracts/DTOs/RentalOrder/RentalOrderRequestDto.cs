@@ -1,24 +1,25 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using HRS.Domain.Enums;
+using HRS.Shared.Core.Dtos;
 
 namespace HRS.API.Contracts.DTOs.RentalOrder;
 
 public class RentalOrderItemRequestDto
 {
-    [Required] public int ItemId { get; set; }
+    [Required] public string ItemId { get; set; } = string.Empty;
     [Required][Range(1, int.MaxValue)] public int Quantity { get; set; }
 }
 
 public class RentalOrderPackageItemRequestDto
 {
-    [Required] public int PackageItemId { get; set; }
-    public int? SelectedItemId { get; set; }
+    [Required] public string PackageItemId { get; set; } = string.Empty;
+    public string? SelectedItemId { get; set; }
 }
 
 public class RentalOrderPackageRequestDto
 {
-    [Required] public int PackageId { get; set; }
+    [Required] public string PackageId { get; set; } = string.Empty;
     [Required][Range(1, int.MaxValue)] public int Quantity { get; set; }
     public ICollection<RentalOrderPackageItemRequestDto>? SelectedItems { get; set; }
 }
@@ -56,7 +57,7 @@ public class ReturnRentalOrderRequestDto
 
 public class ReturnItemConditionDto
 {
-    public int RentalOrderItemId { get; set; }
+    public string RentalOrderItemId { get; set; }   = string.Empty;
 
     public int GoodQty { get; set; }
     public int RepairQty { get; set; }
@@ -66,13 +67,13 @@ public class ReturnItemConditionDto
 
 public class ReturnPackageConditionDto
 {
-    public int RentalOrderPackageId { get; set; }
+    public string RentalOrderPackageId { get; set; } = string.Empty;
     public ICollection<ReturnPackageItemConditionDto> PackageItems { get; set; } = [];
 }
 
 public class ReturnPackageItemConditionDto
 {
-    public int RentalOrderPackageItemId { get; set; }
+    public string RentalOrderPackageItemId { get; set; } = string.Empty;
 
     public int GoodQty { get; set; }
     public int RepairQty { get; set; }
@@ -84,3 +85,22 @@ public class AssignStripeSessionRequest
     public int OrderId { get; set; }
     public string SessionId { get; set; } = string.Empty;
 }
+public class ApprovePaymentRequest
+{
+    public string SessionId { get; set; } = string.Empty;
+    public long? Amount { get; set; }
+}
+
+public class UpdateItemRequestDto
+{
+    public string StoreId { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal Price { get; set; }
+    public ICollection<ItemRateResponseDto>? Rates { get; set; }
+    public ICollection<ItemResponseDto>? Children { get; set; }
+    public bool HasChildren => Children?.Count > 0;
+
+    };
