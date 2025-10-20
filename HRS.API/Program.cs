@@ -12,6 +12,7 @@ using HRS.API.Validators.Rental;
 using HRS.Domain.Interfaces;
 using HRS.Infrastructure;
 using HRS.Infrastructure.Repositories;
+using HRS.Shared.Core.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -21,10 +22,10 @@ using MongoDB.Driver;
 var builder = WebApplication.CreateBuilder(args);
 
 
-
-// builder.Services.AddScoped<IRentalOrderService, RentalOrderService>();
-// builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
-// builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<IUserContextService, UserContextService>();
+builder.Services.AddScoped<IRentalOrderService, RentalOrderService>();
+builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
+builder.Services.AddScoped<ICatalogService, CatalogService>();
 
 builder.Services.AddScoped(typeof(ICrudRepository<>), typeof(CrudRepository<>));
 builder.Services.AddScoped<IRentalOrderRepository, RentalOrderRepository>();
@@ -63,16 +64,25 @@ builder.Services.AddHttpClient("ItemService", client =>
 
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
-    var connectionString = sp.GetRequiredService<IConfiguration>()
-                             .GetConnectionString("DefaultConnectionMongoDB");
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnectionMongoDB")
+        ?? throw new InvalidOperationException("Missing MongoDB connection string.");
     return new MongoClient(connectionString);
 });
-
+builder.Services.AddScoped<IMongoDatabase>(sp =>
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    var databaseName = builder.Configuration["hrsdb-order"];
+    return client.GetDatabase(databaseName);
+});
 // MongoContext
 builder.Services.AddSingleton<MongoContext>();
 builder.Services.AddScoped<IRentalOrderItemMongoDBRepository, RentalOrderItemMongoDBRepository>();
 builder.Services.AddScoped<IRentalOrderPackageItemMongoDBRepository, RentalOrderPackageItemMongoDBRepository>();
+builder.Services.AddScoped<IRentalOrderPackageMongoDBRepository, RentalOrderPackageMongoDBRepository>();
 builder.Services.AddScoped(typeof(ICrudMongoDBRepository<>), typeof(CrudMongoDBRepository<>));
+
+
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

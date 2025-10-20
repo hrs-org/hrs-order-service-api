@@ -9,9 +9,9 @@ public class CrudMongoDBRepository<T> : ICrudMongoDBRepository<T> where T : clas
 {
     protected readonly IMongoCollection<T> _collection;
 
-    public CrudMongoDBRepository(IMongoDatabase database, string collectionName)
+    public CrudMongoDBRepository(IMongoDatabase database)
     {
-        _collection = database.GetCollection<T>(collectionName);
+        _collection = database.GetCollection<T>(typeof(T).Name);
     }
 
     public async Task<T?> GetByIdAsync(object id) =>

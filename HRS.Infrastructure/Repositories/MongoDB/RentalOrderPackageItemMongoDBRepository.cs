@@ -10,7 +10,7 @@ public class RentalOrderPackageItemMongoDBRepository : CrudMongoDBRepository<Ren
 {
     private readonly IMongoCollection<RentalOrderPackageMongoDB> _packages;
 
-        public RentalOrderPackageItemMongoDBRepository(IMongoDatabase db) : base(db, "RentalOrderPackageItemMongoDBs")
+        public RentalOrderPackageItemMongoDBRepository(IMongoDatabase db) : base(db)
         {
             _packages = db.GetCollection<RentalOrderPackageMongoDB>("RentalOrderPackages");
         }
