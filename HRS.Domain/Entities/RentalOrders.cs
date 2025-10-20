@@ -38,10 +38,7 @@ public class RentalOrder
     public int ItemsIssueCount { get; set; }
     public string? ReturnRemarks { get; set; }
     public string? StripeSessionId { get; set; }
-    [NotMapped]
     public ICollection<RentalOrderItemMongoDB> RentalOrderItems { get; set; } = [];
-
-    [NotMapped]
     public ICollection<RentalOrderPackageMongoDB> RentalOrderPackages { get; set; } = [];
     public int CreatedById { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

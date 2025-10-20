@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Data;
 using AutoMapper;
 using HRS.API.Contracts.DTOs.RentalOrder;
@@ -7,6 +8,7 @@ using HRS.Domain.Enums;
 using HRS.Domain.Interfaces;
 using HRS.Shared.Core.Dtos;
 using HRS.Shared.Core.Interfaces;
+using Microsoft.VisualBasic;
 using Stripe.BillingPortal;
 
 namespace HRS.API.Services;
@@ -22,8 +24,9 @@ public class RentalOrderService : IRentalOrderService
     private readonly IMapper _mapper;
     private readonly IRentalOrderRepository _rentalOrderRepository;
     private readonly IUserContextService _userContextService;
-    private readonly ICrudMongoDBRepository<RentalOrderItemMongoDB> _rentalOrderItemRepository;
+    private readonly IRentalOrderItemMongoDBRepository _rentalOrderItemRepository;
     private readonly ICrudMongoDBRepository<RentalOrderPackageMongoDB> _rentalOrderPackageRepository;
+    private readonly IRentalOrderPackageItemMongoDBRepository _rentalOrderPackageItemRepository;
 
     public RentalOrderService(
         IMapper mapper,
@@ -32,7 +35,8 @@ public class RentalOrderService : IRentalOrderService
         IAvailabilityService availabilityService,
         IHttpClientFactory httpClientFactory,
         IRentalOrderItemMongoDBRepository rentalOrderItemRepository,
-        ICrudMongoDBRepository<RentalOrderPackageMongoDB> rentalOrderPackageRepository
+        ICrudMongoDBRepository<RentalOrderPackageMongoDB> rentalOrderPackageRepository,
+        IRentalOrderPackageItemMongoDBRepository rentalOrderPackageItemRepository
     )
     {
         _mapper = mapper;
@@ -44,6 +48,7 @@ public class RentalOrderService : IRentalOrderService
         _itemClient = httpClientFactory.CreateClient("ItemService");
         _rentalOrderItemRepository = rentalOrderItemRepository;
         _rentalOrderPackageRepository = rentalOrderPackageRepository;
+        _rentalOrderPackageItemRepository = rentalOrderPackageItemRepository;
     }
 
     public async Task<RentalOrderResponseDto> GetAsync(int id)
@@ -257,6 +262,7 @@ public class RentalOrderService : IRentalOrderService
     // add controller for this method
     public async Task AssignStripeSessionIdAsync(int orderId, string sessionId)
     {
+        // Console.WriteLine($"Assigning Stripe Session ID: {sessionId} to Order ID: {orderId}");
         var order = await _rentalOrderRepository.GetByIdAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
 
         order.StripeSessionId = sessionId;
@@ -717,5 +723,88 @@ public class RentalOrderService : IRentalOrderService
                         $"Expected {pkgItem.QuantityPerPackageSnapshot}, got {totalReturned}.");
             }
         }
+    }
+
+    /// guide line for create set of DB
+    public async Task<RentalOrder> testcreatDB(int CustomerId, string GuestName, string GuestEmail, string GuestPhone, decimal totalAmount)
+    {
+        var db = new RentalOrder
+        {
+            CustomerId = CustomerId,
+            GuestName = GuestName,
+            GuestEmail = GuestEmail,
+            GuestPhone = GuestPhone,
+            Status = RentalStatus.Pending,
+            StartDate = DateTime.UtcNow,
+            EndDate = DateTime.UtcNow.AddDays(2),
+            Channel = OrderChannel.Online,
+            PaymentType = OrderPaymentType.Other,
+            TotalAmount = totalAmount,
+            CreatedById = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+
+
+
+        await _rentalOrderRepository.AddAsync(db);
+        await _rentalOrderRepository.SaveChangesAsync();
+        var RentalOrderItems = new List<RentalOrderItemMongoDB>
+            {
+                new RentalOrderItemMongoDB
+                {
+                    RentalOrderId = db.Id,
+                    ItemId = 101,
+                    ItemNameSnapshot = "Sample Item 1",
+                    DailyRateSnapshot = 15.00m,
+                    Quantity = 2
+                },
+                new RentalOrderItemMongoDB
+                {
+                    ItemId = 102,
+                    ItemNameSnapshot = "Sample Item 2",
+                    DailyRateSnapshot = 20.00m,
+                    Quantity = 1
+                }
+            };
+
+        var RentalOrderItems1 = new RentalOrderPackageItemMongoDB
+                        {
+                            ItemId = 103,
+                            ItemNameSnapshot = "Package Item 1",
+                            QuantityPerPackageSnapshot = 1
+                        };
+        var RentalOrderItems2 = new RentalOrderPackageItemMongoDB
+                        {
+                            ItemId = 104,
+                            ItemNameSnapshot = "Package Item 2",
+                            QuantityPerPackageSnapshot = 2
+                        };
+
+        await _rentalOrderPackageItemRepository.AddRangeAsync(new[] { RentalOrderItems1, RentalOrderItems2 });
+        var RentalOrderPackages = new List<RentalOrderPackageMongoDB>
+            {
+                new RentalOrderPackageMongoDB
+                {
+                    RentalOrderId = db.Id,
+                    PackageId = 201,
+                    PackageNameSnapshot = "Sample Package 1",
+                    DailyRateSnapshot = 50.00m,
+                    Quantity = 1,
+                    Items = new Collection<RentalOrderPackageItemMongoDB>
+                    {
+                        RentalOrderItems1,
+                        RentalOrderItems2
+
+                    }
+                }
+            };
+        await _rentalOrderItemRepository.AddRangeAsync(RentalOrderItems);
+        await _rentalOrderPackageRepository.AddRangeAsync(RentalOrderPackages);
+        db.RentalOrderItems = RentalOrderItems;
+        db.RentalOrderPackages = RentalOrderPackages;
+        await _rentalOrderRepository.SaveChangesAsync();
+        return db;
     }
 }

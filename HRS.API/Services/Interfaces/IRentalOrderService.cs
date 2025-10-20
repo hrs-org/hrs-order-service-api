@@ -1,4 +1,5 @@
 using HRS.API.Contracts.DTOs.RentalOrder;
+using HRS.Domain.Entities;
 using HRS.Domain.Enums;
 
 namespace HRS.API.Services.Interfaces;
@@ -16,4 +17,5 @@ public interface IRentalOrderService
     Task<RentalOrderResponseDto> MarkAsRentedAsync(int id);
     Task<RentalOrderResponseDto> ReturnAsync(int id, ReturnRentalOrderRequestDto dto);
     Task<RentalOrderResponseDto> CloseAsync(int id);
+    Task<RentalOrder> testcreatDB(int CustomerId, string GuestName, string GuestEmail, string GuestPhone, decimal totalAmount);
 }

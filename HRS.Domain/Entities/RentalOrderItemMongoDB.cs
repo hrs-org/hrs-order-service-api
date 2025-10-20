@@ -11,16 +11,16 @@ public class RentalOrderItemMongoDB
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = null!;
 
-    [BsonRepresentation(BsonType.ObjectId)]
+
     public int RentalOrderId { get; set; }
     public RentalStatus RentalOrderStatus { get; set; } = RentalStatus.Pending;
     public DateTime RentalOrderStartDate { get; set; }
     public DateTime RentalOrderEndDate { get; set; }
 
-    [BsonRepresentation(BsonType.ObjectId)]
+
     public int ItemId { get; set; }
 
-    [BsonRepresentation(BsonType.ObjectId)]
+
     public int? ItemRateId { get; set; }
 
     public string ItemNameSnapshot { get; set; } = null!;

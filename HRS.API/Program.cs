@@ -71,7 +71,7 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 builder.Services.AddScoped<IMongoDatabase>(sp =>
 {
     var client = sp.GetRequiredService<IMongoClient>();
-    var databaseName = builder.Configuration["hrsdb-order"];
+    var databaseName = builder.Configuration["MongoDB:DatabaseName"];
     return client.GetDatabase(databaseName);
 });
 // MongoContext

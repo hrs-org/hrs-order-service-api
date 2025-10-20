@@ -9,10 +9,9 @@ public class RentalOrderPackageItemMongoDB
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = null!;
 
-    [BsonRepresentation(BsonType.ObjectId)]
+
     public int RentalOrderPackageId { get; set; }
 
-    [BsonRepresentation(BsonType.ObjectId)]
     public int ItemId { get; set; }
 
     public string ItemNameSnapshot { get; set; } = null!;
