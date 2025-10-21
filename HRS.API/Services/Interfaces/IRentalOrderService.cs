@@ -18,7 +18,7 @@ public interface IRentalOrderService
     Task<RentalOrderResponseDto> ReturnAsync(string id, ReturnRentalOrderRequestDto dto);
     Task<RentalOrderResponseDto> CloseAsync(string id);
 
-    Task<IEnumerable<RentalOrderMongoDB>> GetForDb();
+    Task GetForDb(string orderId);
     Task<RentalOrderMongoDB> CreateDB(CreateRentalOrderRequestDto dto);
 
 }

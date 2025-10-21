@@ -116,7 +116,8 @@ public class RentalOrderService : IRentalOrderService
                 : entity is { PaymentType: OrderPaymentType.Cash, Channel: OrderChannel.Manual }
                     ? RentalStatus.Booked
                     : RentalStatus.PendingPayment;
-
+        entity.RentalOrderPackages = new Collection<Package>();
+        entity.RentalOrderItems = new Collection<Item>();
         var totalAmount = 0m;
 
         if (dto.Items is not null)
@@ -204,42 +205,37 @@ public class RentalOrderService : IRentalOrderService
                     DailyRateSnapshot = dailyRate,
                     Quantity = pkgDto.Quantity
                 };
+                if (pkgDto.SelectedItems != null)
+                {
 
-                // foreach (var pi in pkg.Data.Items)
-                // {
+                    foreach (var pi in pkgDto.SelectedItems)
+                    {   var finalItem = null as ItemResponseDto;
+                        foreach (var pkgItemDto in pkg.Data.Items)
+                        {
 
-                //     // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
-                //     //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                //     var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{pi.ItemId}"); // Adjust the endpoint as necessary
-                //     if (itemResponse == null || itemResponse.Data == null)
-                //         throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                //     var item = itemResponse.Data;
-                //     var finalItem = item;
-                //     var selectedItemId = item.Children?
-                //         .FirstOrDefault(si => si.Id == pi.ItemId)?.Id;
 
-                //     if (item?.Children?.Count != 0)
-                //     {
-                //         if (selectedItemId == null)
-                //             throw new InvalidOperationException($"Variant required for item '{item?.Name}' in package '{pkg.Data.Name}'.");
+                                // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
+                                //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
+                            var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{pkgItemDto.ItemId}"); // Adjust the endpoint as necessary
+                            if (itemResponse == null || itemResponse.Data == null)
+                                throw new KeyNotFoundException($"Item {pkgItemDto.ItemId} not found.");
+                            var item = itemResponse.Data;
 
-                //         var selectedChild = item?.Children?.FirstOrDefault(c => c.Id == selectedItemId)
-                //                             ?? throw new InvalidOperationException($"Invalid variant selection for '{item?.Name}'.");
-
-                //         finalItem = selectedChild;
-                //     }
-                //     if (finalItem == null)
-                //         throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                //     rentalPkg.PackageItems.Add(new PackageItem
-                //     {
-                //         ItemId = finalItem.Id,
-                //         ItemNameSnapshot = finalItem.Name,
-                //         QuantityPerPackageSnapshot = pi.Quantity
-                //     });
-                // }
+                            finalItem = item?.Children?.FirstOrDefault(c => c.Id == pi.SelectedItemId);
+                            if (finalItem != null)
+                                rentalPkg.PackageItems.Add(new PackageItem
+                            {
+                                ItemId = finalItem.Id,
+                                ItemNameSnapshot = finalItem.Name,
+                                QuantityPerPackageSnapshot = pkgDto.Quantity
+                            }
+                            );
+                        }
+                    }
+                }
 
                 entity.RentalOrderPackages.Add(rentalPkg);
-                totalAmount += dailyRate * pkgDto.Quantity * rentalDays;
+                totalAmount += dailyRate * (pkgDto?.Quantity ?? 1) * rentalDays;
             }
 
 
@@ -282,7 +278,7 @@ public class RentalOrderService : IRentalOrderService
 
         }
 
-
+        await _rentalOrderMongoDBRepository.UpdateAsync(entity, entity.Id);
         return _mapper.Map<RentalOrderResponseDto>(entity);
 
     }
@@ -601,9 +597,9 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-    public async Task<IEnumerable<RentalOrderMongoDB>> GetForDb()
+        public async Task GetForDb(string orderId)
     {
-        return await _rentalOrderMongoDBRepository.GetAllAsync();
+        await _rentalOrderMongoDBRepository.RemoveAsync(orderId);
     }
     public async Task<RentalOrderMongoDB> CreateDB(CreateRentalOrderRequestDto dto)
     {

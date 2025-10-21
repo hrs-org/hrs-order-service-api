@@ -112,7 +112,7 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order closed successfully"));
     }
 
-    [HttpPost("/api/orders/assign-stripe-sessionid")]
+    [HttpPost("/api/orders/assign-stripe-sessionid/{orderId}")]
     [Authorize(Roles = "Employee,Manager,Admin")]
     public async Task<ActionResult<RentalOrderResponseDto>> AssignStripeSessionId([FromBody] AssignStripeSessionRequest request)
     {
@@ -127,10 +127,10 @@ public class RentalOrderController : ControllerBase
 
     [HttpGet("/api/orders/get-for-db")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderMongoDB>>> GetForDb()
+    public async Task<ActionResult> GetForDb(string orderId)
     {
-        var result = await _rentalOrderService.GetForDb();
-        return Ok(ApiResponse<IEnumerable<RentalOrderMongoDB>>.OkResponse(result));
+        await _rentalOrderService.GetForDb(orderId);
+        return Ok(ApiResponse<string>.OkResponse("Order retrieved successfully"));
     }
 
     [HttpPost("/api/orders/create-db")]
