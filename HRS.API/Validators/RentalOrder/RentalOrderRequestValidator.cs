@@ -54,7 +54,7 @@ public class RentalOrderRequestValidator : AbstractValidator<CreateRentalOrderRe
             });
         RuleFor(x => x.StoreId)
             .NotEmpty().WithMessage("StoreId is required.")
-            .MaximumLength(100);
+            .GreaterThan(0).WithMessage("StoreId must be greater than zero.");
     }
 
     private bool HaveCustomerOrGuest(CreateRentalOrderRequestDto dto)

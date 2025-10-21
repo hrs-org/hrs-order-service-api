@@ -30,7 +30,7 @@ public class CreateRentalOrderRequestDto
     [MaxLength(150)] public string? GuestName { get; set; }
     [MaxLength(50)] public string? GuestPhone { get; set; }
     [MaxLength(150)] public string? GuestEmail { get; set; }
-    [MaxLength(100)] public string StoreId { get; set; } = string.Empty;
+    [MaxLength(100)] public int StoreId { get; set; }
 
     [Required] public DateTime StartDate { get; set; }
     [Required] public DateTime EndDate { get; set; }
@@ -94,7 +94,7 @@ public class ApprovePaymentRequest
 
 public class UpdateItemRequestDto
 {
-    public string StoreId { get; set; } = string.Empty;
+    public int StoreId { get; set; }
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
