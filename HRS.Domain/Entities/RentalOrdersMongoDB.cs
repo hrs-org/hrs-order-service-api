@@ -10,7 +10,7 @@ public class RentalOrderMongoDB
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = null!;
-    public string StoreId { get; set; } = null!;
+    public required int StoreId { get; set; }
     public int? CustomerId { get; set; }
     public string GuestName { get; set; } = null!;
     public string GuestPhone { get; set; } = null!;

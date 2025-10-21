@@ -4,5 +4,5 @@ namespace HRS.API.Services.Interfaces;
 
 public interface ICatalogService
 {
-    Task<CatalogResponseDto> GetStoreAvailabilityAsync(DateTime startDate, DateTime endDate, string storeId);
+    Task<CatalogResponseDto> GetStoreAvailabilityAsync(DateTime startDate, DateTime endDate, int storeId);
 }
