@@ -11,31 +11,45 @@ public class RentalOrderProfile : Profile
     public RentalOrderProfile()
     {
         CreateMap<RentalOrderMongoDB, RentalOrderResponseDto>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-                .ForMember(dest => dest.Channel, opt => opt.MapFrom(src => src.Channel.ToString()))
-                .ForMember(dest => dest.PaymentType, opt => opt.MapFrom(src => src.PaymentType.ToString()))
-                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.RentalOrderItems))
-                .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.RentalOrderPackages))
-                .ForMember(dest => dest.StoreId, opt => opt.MapFrom(src => src.StoreId));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.Channel, opt => opt.MapFrom(src => src.Channel.ToString()))
+            .ForMember(dest => dest.PaymentType, opt => opt.MapFrom(src => src.PaymentType.ToString()))
+            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.RentalOrderItems))
+            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.RentalOrderPackages));
         CreateMap<Item, RentalOrderItemDto>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-                .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId))
-                .ForMember(dest => dest.ItemNameSnapshot, opt => opt.MapFrom(src => src.ItemNameSnapshot))
-                .ForMember(dest => dest.DailyRateSnapshot, opt => opt.MapFrom(src => src.DailyRateSnapshot))
-                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity));
+            .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => SafeToNullableInt(src.ItemId)));
         CreateMap<Package, RentalOrderPackageDto>()
-               .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-               .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => src.PackageId))
-               .ForMember(dest => dest.PackageNameSnapshot, opt => opt.MapFrom(src => src.PackageNameSnapshot))
-               .ForMember(dest => dest.DailyRateSnapshot, opt => opt.MapFrom(src => src.DailyRateSnapshot))
-               .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
-               .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.PackageItems));
+            .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => SafeToNullableInt(src.PackageId)))
+            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.PackageItems));
         CreateMap<PackageItem, RentalOrderPackageItemDto>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-                .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId))
-                .ForMember(dest => dest.ItemNameSnapshot, opt => opt.MapFrom(src => src.ItemNameSnapshot))
-                .ForMember(dest => dest.QuantityPerPackageSnapshot, opt => opt.MapFrom(src => src.QuantityPerPackageSnapshot));
+           .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => SafeToNullableInt(src.ItemId)));
+
+        // CreateMap<RentalOrderMongoDB, RentalOrderResponseDto>()
+        //         .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+        //         .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+        //         .ForMember(dest => dest.Channel, opt => opt.MapFrom(src => src.Channel.ToString()))
+        //         .ForMember(dest => dest.PaymentType, opt => opt.MapFrom(src => src.PaymentType.ToString()))
+        //         .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.RentalOrderItems))
+        //         .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.RentalOrderPackages))
+        //         .ForMember(dest => dest.StoreId, opt => opt.MapFrom(src => src.StoreId));
+        // CreateMap<Item, RentalOrderItemDto>()
+        //         .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+        //         .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId))
+        //         .ForMember(dest => dest.ItemNameSnapshot, opt => opt.MapFrom(src => src.ItemNameSnapshot))
+        //         .ForMember(dest => dest.DailyRateSnapshot, opt => opt.MapFrom(src => src.DailyRateSnapshot))
+        //         .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity));
+        // CreateMap<Package, RentalOrderPackageDto>()
+        //        .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+        //        .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => src.PackageId))
+        //        .ForMember(dest => dest.PackageNameSnapshot, opt => opt.MapFrom(src => src.PackageNameSnapshot))
+        //        .ForMember(dest => dest.DailyRateSnapshot, opt => opt.MapFrom(src => src.DailyRateSnapshot))
+        //        .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
+        //        .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.PackageItems));
+        // CreateMap<PackageItem, RentalOrderPackageItemDto>()
+        //         .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+        //         .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId))
+        //         .ForMember(dest => dest.ItemNameSnapshot, opt => opt.MapFrom(src => src.ItemNameSnapshot))
+        //         .ForMember(dest => dest.QuantityPerPackageSnapshot, opt => opt.MapFrom(src => src.QuantityPerPackageSnapshot));
 
         CreateMap<RentalOrderMongoDB, RentalOrderListDto>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
@@ -61,6 +75,7 @@ public class RentalOrderProfile : Profile
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow))
                 .ForMember(dest => dest.RentalOrderItems, opt => opt.MapFrom(src => src.Items))
                 .ForMember(dest => dest.RentalOrderPackages, opt => opt.MapFrom(src => src.Packages));
+
         // .ForAllOtherMembers(opt => opt.Ignore());
 
         // ─────────────────────────────
@@ -139,5 +154,21 @@ public class RentalOrderProfile : Profile
         //     opt => opt.MapFrom(src => src.Customer != null ? src.Customer.FirstName : src.GuestName))
         // .ForMember(dest => dest.CustomerPhone,
         //     opt => opt.MapFrom(src => src.Customer != null ? "-" : src.GuestPhone));
+
     }
+
+     private static int? SafeToNullableInt(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        try
+        {
+            return Convert.ToInt32(value);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+
 }

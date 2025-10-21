@@ -23,20 +23,27 @@ public class AvailabilityService : IAvailabilityService
 
     }
 
-    public async Task<int> GetAvailableQuantityAsync(string itemId, DateTime startDate, DateTime endDate)
-    {
-        // var item = await _itemRepository.GetByIdAsync(itemId)
-        var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
-        if (response == null || response.Data == null)
-            throw new KeyNotFoundException($"Item {itemId} not found.");
-        var item = response.Data;
-        var reservedItemsAndPackages = await _rentalOrderMongoDBRepository.GetReservedQuantityAsync(itemId, startDate, endDate);
+    public async Task<int> GetAvailableQuantityAsync(string itemId, DateTime startDate, DateTime endDate, ItemResponseDto? item = null)
+    {   if(item == null)
+        {
+            var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
+            if (response == null || response.Data == null)
+                throw new KeyNotFoundException($"Item {itemId} not found.");
+            item = response.Data;
+        }
+        var reservedItemsAndPackages = await _rentalOrderMongoDBRepository.GetReservedQuantityAsync(item.Id, startDate, endDate);
         // var repairingQty = await _itemMaintenanceRepository
         //     .GetRepairingQuantityAsync(itemId);
-        var repairingResponse = await _itemMaintenanceClient.GetFromJsonAsync<ApiResponse<ItemMaintenanceResponseDto>>($"/api/item-maintenances/{itemId}"); // Adjust the endpoint as necessary
+        var repairingQty = 0;
+        var repairingResponse = await _itemMaintenanceClient.GetFromJsonAsync<ApiResponse<ItemMaintenanceResponseDto>>($"/api/item-maintenances/items/{item.Id}"); // Adjust the endpoint as necessary
         if (repairingResponse == null || repairingResponse.Data == null)
-            throw new InvalidOperationException($"Failed to retrieve repairing quantity for Item {itemId} from Item Maintenance Service.");
-        var repairingQty = repairingResponse.Data.Quantity;
+        {
+            repairingQty = 0;
+        }
+        else
+        {
+            repairingQty = repairingResponse.Data.Quantity;
+        }
         var totalReserved = reservedItemsAndPackages + repairingQty;
         var available = item.Quantity - totalReserved;
         return available;

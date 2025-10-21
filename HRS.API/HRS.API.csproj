@@ -17,7 +17,7 @@
         <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
         <PackageReference Include="FluentValidation" Version="12.0.0" />
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
-        <PackageReference Include="HRS.Shared.Core" Version="0.1.14" />
+        <PackageReference Include="HRS.Shared.Core" Version="0.1.16" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.7" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.19" />
         <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />

@@ -598,6 +598,26 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
+        public async Task<IEnumerable<RentalOrderMongoDB>> GetForDb()
+    {
+        return await _rentalOrderMongoDBRepository.GetAllAsync();
+    }
+    public async Task<RentalOrderMongoDB> CreateDB(CreateRentalOrderRequestDto dto)
+    {
+        var user = await _userContextService.GetUserAsync();
+
+        var entity = _mapper.Map<RentalOrderMongoDB>(dto);
+        entity.CreatedById = user.Id;
+        entity.CreatedAt = DateTime.UtcNow;
+        entity.UpdatedById = user.Id;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _rentalOrderMongoDBRepository.AddAsync(entity);
+
+        return entity;
+    }
+
+
 
 
 }
