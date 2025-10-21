@@ -14,8 +14,6 @@ public class ReturnRentalOrderRequestValidator : AbstractValidator<ReturnRentalO
         RuleForEach(x => x.Items)
             .ChildRules(items =>
             {
-                items.RuleFor(i => i.RentalOrderItemId)
-                    .GreaterThan(0).WithMessage("RentalOrderItemId is required.");
 
                 items.RuleFor(i => i.GoodQty)
                     .GreaterThanOrEqualTo(0);
@@ -37,8 +35,6 @@ public class ReturnRentalOrderRequestValidator : AbstractValidator<ReturnRentalO
         RuleForEach(x => x.Packages)
             .ChildRules(packages =>
             {
-                packages.RuleFor(p => p.RentalOrderPackageId)
-                    .GreaterThan(0).WithMessage("RentalOrderPackageId is required.");
 
                 packages.RuleFor(p => p.PackageItems)
                     .NotEmpty().WithMessage("Each returned package must include at least one package item.");
@@ -46,8 +42,6 @@ public class ReturnRentalOrderRequestValidator : AbstractValidator<ReturnRentalO
                 packages.RuleForEach(p => p.PackageItems)
                     .ChildRules(pi =>
                     {
-                        pi.RuleFor(x => x.RentalOrderPackageItemId)
-                            .GreaterThan(0).WithMessage("RentalOrderPackageItemId is required.");
 
                         pi.RuleFor(x => x.GoodQty)
                             .GreaterThanOrEqualTo(0);

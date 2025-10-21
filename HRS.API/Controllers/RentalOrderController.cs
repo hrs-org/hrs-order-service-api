@@ -1,6 +1,7 @@
 using HRS.API.Contracts.DTOs;
 using HRS.API.Contracts.DTOs.RentalOrder;
 using HRS.API.Services.Interfaces;
+using HRS.Domain.Entities;
 using HRS.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +21,7 @@ public class RentalOrderController : ControllerBase
 
     [HttpGet("{id:int}")]
     [Authorize]
-    public async Task<ActionResult<RentalOrderResponseDto>> GetById(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> GetById(string id)
     {
         var result = await _rentalOrderService.GetAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result));
@@ -34,23 +35,23 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<List<RentalOrderListDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("bookings")]
+    [HttpGet("bookings/{storeid}")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings()
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings(string storeid)
     {
         var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled, RentalStatus.PendingPayment };
 
-        var result = await _rentalOrderService.GetByStasusesAsync(bookingStatuses);
+        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses, storeid);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("rents")]
+    [HttpGet("rents/{storeid}")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents()
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents(string storeid)
     {
         var rentStatuses = new[] { RentalStatus.Rented };
 
-        var result = await _rentalOrderService.GetByStasusesAsync(rentStatuses);
+        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses, storeid);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
@@ -62,51 +63,67 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order created successfully"));
     }
 
-    [HttpPut("{id:int}/approve-payment")]
+    [HttpPut("{id}/approve-payment")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> ApprovePayment(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> ApprovePayment([FromBody] ApprovePaymentRequest request)
+    {
+        var id = request.SessionId;
+        var amount = request.Amount;
+        var result = await _rentalOrderService.ApprovePaymentAsync(id, amount);
+        return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order approved successfully"));
+    }
+
+    [HttpPut("{id}/approve")]
+    [Authorize(Roles = "Employee,Manager,Admin")]
+    public async Task<ActionResult<RentalOrderResponseDto>> Approve(string id)
     {
         var result = await _rentalOrderService.ApproveAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order approved successfully"));
     }
 
-    [HttpPut("{id:int}/approve")]
+    [HttpPut("{id}/cancel")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> Approve(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> CancelOrder(string id)
     {
-        var result = await _rentalOrderService.ApproveAsync(id);
-        return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order approved successfully"));
+        var result = await _rentalOrderService.CancelAsync(id);
+        return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order cancelled successfully"));
     }
 
-    [HttpPut("{id:int}/cancel")]
+    [HttpPut("{id}/confirm")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> CancelOrder(int id)
-    {
-        var result = await _rentalOrderService.ApproveAsync(id);
-        return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order approved successfully"));
-    }
-
-    [HttpPut("{id:int}/confirm")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> MarkAsRented(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> MarkAsRented(string id)
     {
         var result = await _rentalOrderService.MarkAsRentedAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order marked as rented successfully"));
     }
 
-    [HttpPut("{id:int}/return")]
+    [HttpPut("{id}/return")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> Return(int id, [FromBody] ReturnRentalOrderRequestDto dto)
+    public async Task<ActionResult<RentalOrderResponseDto>> Return(string id, [FromBody] ReturnRentalOrderRequestDto dto)
     {
         var result = await _rentalOrderService.ReturnAsync(id, dto);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order returned successfully"));
     }
 
-    [HttpPut("{id:int}/close")]
+    [HttpPut("{id}/close")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> Close(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> Close(string id)
     {
         var result = await _rentalOrderService.CloseAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order closed successfully"));
     }
+
+    [HttpPost("/api/orders/assign-stripe-sessionid")]
+    [Authorize(Roles = "Employee,Manager,Admin")]
+    public async Task<ActionResult<RentalOrderResponseDto>> AssignStripeSessionId([FromBody] AssignStripeSessionRequest request)
+    {
+        var id = request.OrderId;
+        var sessionId = request.SessionId;
+        {
+            await _rentalOrderService.AssignStripeSessionIdAsync(id, sessionId);
+            return Ok(ApiResponse<string>.OkResponse("Stripe Session ID assigned successfully"));
+        }
+
+    }
+
 }

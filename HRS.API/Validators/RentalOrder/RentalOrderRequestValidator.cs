@@ -1,3 +1,4 @@
+using System.Data;
 using FluentValidation;
 using HRS.API.Contracts.DTOs.RentalOrder;
 
@@ -51,6 +52,9 @@ public class RentalOrderRequestValidator : AbstractValidator<CreateRentalOrderRe
                 packages.RuleFor(p => p.Quantity)
                     .GreaterThan(0).WithMessage("Quantity must be greater than zero.");
             });
+        RuleFor(x => x.StoreId)
+            .NotEmpty().WithMessage("StoreId is required.")
+            .MaximumLength(100);
     }
 
     private bool HaveCustomerOrGuest(CreateRentalOrderRequestDto dto)

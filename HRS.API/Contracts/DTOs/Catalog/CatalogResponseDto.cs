@@ -10,7 +10,7 @@ public class CatalogResponseDto
 
 public class CatalogItemNodeDto
 {
-    public int ItemId { get; set; }
+    public string ItemId { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
     public decimal DailyRate { get; set; }
     public int AvailableQuantity { get; set; }
@@ -19,7 +19,7 @@ public class CatalogItemNodeDto
 
 public class CatalogPackageDto
 {
-    public int PackageId { get; set; }
+    public string PackageId { get; set; } = string.Empty;
     public string PackageName { get; set; } = string.Empty;
     public decimal DailyRate { get; set; }
     public int AvailablePackages { get; set; }
@@ -28,7 +28,7 @@ public class CatalogPackageDto
 
 public class CatalogPackageItemNodeDto
 {
-    public int ItemId { get; set; }
+    public string ItemId { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
     public decimal DailyRate { get; set; }
     public int AvailableQuantity { get; set; }
