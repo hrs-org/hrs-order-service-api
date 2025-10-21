@@ -1,48 +1,216 @@
-name: UAT Release Pipeline
+name: Release UAT to AKS
 
 on:
     workflow_dispatch:
+        inputs:
+            version:
+                description: 'Version to deploy (e.g., 1.0.0, dev-abc123, or "latest")'
+                required: true
+                default: "latest"
+                type: string
+            environment:
+                description: "Target environment"
+                required: true
+                default: "uat"
+                type: choice
+                options:
+                    - uat
+
+permissions:
+    contents: read
+    actions: read
+    id-token: write
+
+env:
+    AZURE_RESOURCE_GROUP: hrs-cluster-uat-rg
+    AKS_CLUSTER_NAME: hrs-cluster-uat
+    NAMESPACE: orders
+    DEPLOYMENT_NAME: hrs-order-service
+    SERVICE_NAME: hrs-order-service
 
 jobs:
-    deploy-azure:
-        name: Deploy to Azure Web App
+    deploy:
         runs-on: ubuntu-latest
-        environment: staging
+        environment: ${{ github.event.inputs.environment }}
+
         steps:
-            - name: Log in to Docker Hub
-              env:
-                  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-                  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-              run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-            - name: Pull Docker image
-              env:
-                  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-              run: |
-                  docker pull $DOCKER_USERNAME/hrs-api:uat-latest
-
-            - name: Azure Login
-              uses: azure/login@cb79c773a3cfa27f31f25eb3f677781210c9ce3d # v1.6.1
-              with:
-                  creds: ${{ secrets.AZURE_CREDENTIALS }}
-
             - name: Checkout code
               uses: actions/checkout@v4
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
+            - name: Set up Azure CLI
+              uses: azure/login@v1
               with:
-                  global-json-file: global.json
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-            - name: Run EF Core migrations
-              env:
-                  ConnectionStrings__DefaultConnection: ${{ secrets.TF_MYSQL_CONNECTION_STRING }}
+            - name: Set up kubectl
+              uses: azure/setup-kubectl@v3
+              with:
+                  version: "latest"
+
+            - name: Get AKS credentials
               run: |
-                  dotnet tool install --global dotnet-ef --version 8.0.7
-                  dotnet ef database update --project HRS.Migrations --startup-project HRS.API
+                  az aks get-credentials \
+                    --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                    --name ${{ env.AKS_CLUSTER_NAME }} \
+                    --overwrite-existing
 
-            - name: Deploy container
-              uses: azure/webapps-deploy@122b7ec46017e53a3f71e3a027d67550a1641f5e # v2.2.17
-              with:
-                  app-name: web-hrs-api-uat
-                  images: ${{ secrets.DOCKER_USERNAME }}/hrs-api:uat-latest
+            - name: Create namespace if not exists
+              run: |
+                  kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+            - name: Attach ACR to AKS (if not already attached)
+              run: |
+                  az aks update \
+                    --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                    --name ${{ env.AKS_CLUSTER_NAME }} \
+                    --attach-acr ${{ secrets.ACR_NAME }} || echo "ACR already attached or unable to attach"
+
+            - name: Verify image exists in ACR
+              run: |
+                  echo "🔍 Verifying image exists in ACR..."
+
+                  # List all available tags
+                  echo "Available tags:"
+                  az acr repository show-tags \
+                    --name ${{ secrets.ACR_NAME }} \
+                    --repository hrs-order-service \
+                    --orderby time_desc \
+                    --output table
+
+                  # Check if specific tag exists
+                  if az acr repository show-tags \
+                      --name ${{ secrets.ACR_NAME }} \
+                      --repository hrs-order-service \
+                      --output tsv | grep -q "^${{ github.event.inputs.version }}$"; then
+                    echo "✅ Image tag '${{ github.event.inputs.version }}' found in ACR"
+                  else
+                    echo "❌ Image tag '${{ github.event.inputs.version }}' not found in ACR"
+                    echo ""
+                    echo "Please use one of the available tags listed above or build the image first."
+                    exit 1
+                  fi
+
+            - name: Prepare deployment manifest
+              run: |
+                  echo "Preparing deployment manifest with secrets..."
+
+                  # Replace placeholders in the deployment file
+                  sed "s|__ACR_NAME__|${{ secrets.ACR_NAME }}|g" k8s/deployment-uat.yaml | \
+                  sed "s|__IMAGE_TAG__|${{ github.event.inputs.version }}|g" | \
+                  sed "s|__MONGODB_CONNECTION_STRING__|${{ secrets.MONGODB_CONNECTION_STRING || 'mongodb://admin:password@mongodb.orders.svc.cluster.local:27017' }}|g" | \
+                  sed "s|__MONGODB_DATABASE_NAME__|${{ secrets.MONGODB_DATABASE_NAME || 'hrsdb-order' }}|g" | \
+                  sed "s|__JWT_ISSUER__|${{ secrets.JWT_ISSUER || 'HRSApp' }}|g" | \
+                  sed "s|__JWT_AUDIENCE__|${{ secrets.JWT_AUDIENCE || 'HRSUsers' }}|g" | \
+                  sed "s|__JWT_SECRET_KEY__|${{ secrets.JWT_SECRET_KEY }}|g" | \
+                  sed "s|__ALLOWED_ORIGINS__|${{ secrets.ALLOWED_ORIGINS || 'http://localhost:4200' }}|g" | \
+                  sed "s|__ITEM_MAINTENANCE_SERVICE__|${{ secrets.ITEM_MAINTENANCE_SERVICE || 'http://hrs-maintenance-service.maintenance.svc.cluster.local' }}|g" | \
+                  sed "s|__PAYMENT_SERVICE__|${{ secrets.PAYMENT_SERVICE || 'http://hrs-payment-service.payments.svc.cluster.local' }}|g" | \
+                  sed "s|__ITEM_SERVICE__|${{ secrets.ITEM_SERVICE || 'http://hrs-inventory-service.inventory.svc.cluster.local' }}|g" \
+                  > k8s/deployment-final.yaml
+
+                  # Show the final manifest for debugging (mask sensitive values)
+                  echo "=== Final Deployment Manifest (sensitive values masked) ==="
+                  cat k8s/deployment-final.yaml | grep -v "MONGODB_CONNECTION_STRING" | grep -v "JWT_SECRET_KEY" || cat k8s/deployment-final.yaml
+
+            - name: Deploy to AKS
+              run: |
+                  echo "🚀 Deploying to AKS..."
+                  kubectl apply -f k8s/deployment-final.yaml
+
+                  # Wait for deployment to be fully registered
+                  echo "Waiting for deployment to be registered..."
+                  for i in {1..10}; do
+                    if kubectl get deployment/${{ env.DEPLOYMENT_NAME }} -n ${{ env.NAMESPACE }} &>/dev/null; then
+                      echo "✅ Deployment registered"
+                      break
+                    fi
+                    echo "Waiting... ($i/10)"
+                    sleep 2
+                  done
+
+                  # Annotate deployment with metadata
+                  if kubectl get deployment/${{ env.DEPLOYMENT_NAME }} -n ${{ env.NAMESPACE }} &>/dev/null; then
+                    kubectl annotate deployment/${{ env.DEPLOYMENT_NAME }} \
+                      -n ${{ env.NAMESPACE }} \
+                      deployment.kubernetes.io/version="${{ github.event.inputs.version }}" \
+                      deployment.kubernetes.io/deployed-by="${{ github.actor }}" \
+                      deployment.kubernetes.io/deployed-at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+                      --overwrite
+                    echo "✅ Deployment annotated"
+                  fi
+
+            - name: Wait for deployment rollout
+              run: |
+                  echo "⏳ Waiting for deployment to complete..."
+                  kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} \
+                    --namespace=${{ env.NAMESPACE }} \
+                    --timeout=300s
+
+            - name: Verify Deployment
+              run: |
+                  echo "=== Pods Status ==="
+                  kubectl get pods -n ${{ env.NAMESPACE }}
+                  echo ""
+                  echo "=== Service Status ==="
+                  kubectl get svc -n ${{ env.NAMESPACE }}
+                  echo ""
+                  echo "=== Recent Pod Logs ==="
+                  kubectl logs -n ${{ env.NAMESPACE }} -l app=hrs-order-service --tail=50
+
+            - name: Run smoke tests
+              run: |
+                  echo "🧪 Running smoke tests..."
+
+                  # Port forward for testing (runs in background)
+                  kubectl port-forward service/${{ env.SERVICE_NAME }} 8080:80 -n ${{ env.NAMESPACE }} &
+                  PORT_FORWARD_PID=$!
+
+                  # Wait for port forward to be ready
+                  echo "Waiting for port forward to be ready..."
+                  sleep 10
+
+                  # Test health endpoint
+                  echo "Testing health endpoint..."
+                  if curl -f -s http://localhost:8080/health; then
+                    echo ""
+                    echo "✅ Health check passed"
+                    HEALTH_STATUS="success"
+                  else
+                    echo ""
+                    echo "❌ Health check failed"
+                    HEALTH_STATUS="failed"
+                  fi
+
+                  # Clean up port forward
+                  kill $PORT_FORWARD_PID || true
+
+                  # Exit with error if health check failed
+                  if [ "$HEALTH_STATUS" = "failed" ]; then
+                    exit 1
+                  fi
+
+            - name: Post deployment summary
+              if: always()
+              run: |
+                  echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+                  echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Service** | Order Service |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Environment** | \`${{ github.event.inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Version** | \`${{ github.event.inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Namespace** | \`${{ env.NAMESPACE }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Cluster** | \`${{ env.AKS_CLUSTER_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Deployed by** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Deployed at** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "${{ job.status }}" == "success" ]; then
+                    echo "### ✅ Status: Deployment Successful" >> $GITHUB_STEP_SUMMARY
+                  else
+                    echo "### ❌ Status: Deployment Failed" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+            - name: Azure Logout
+              run: az logout
+              if: always()
