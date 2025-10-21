@@ -26,7 +26,7 @@ public class CatalogService : ICatalogService
         // var rootItems = await _itemRepository.GetRootItemsAsync();
         Console.WriteLine($"Fetching root items for storeId: {storeId}");
         var response = await _itemClient.GetFromJsonAsync<ApiResponse<IEnumerable<ItemResponseDto>>>($"/api/items?storeId={storeId}"); // Adjust the endpoint as necessary
-        if (response == null || response.Data == null )
+        if (response == null || response.Data == null)
             throw new InvalidOperationException("Failed to retrieve root items from Item Service.");
         var rootItems = response.Data;
         var itemNodes = new List<CatalogItemNodeDto>();
@@ -49,7 +49,7 @@ public class CatalogService : ICatalogService
         if (item.Children?.Count == 0)
         {
             var available = await _availabilityService.GetAvailableQuantityAsync(item.Id, startDate, endDate);
-            var dailyRate = await ResolveItemDailyRateAsync(item, rentalDays,parentItem);
+            var dailyRate = await ResolveItemDailyRateAsync(item, rentalDays, parentItem);
 
             return new CatalogItemNodeDto
             {
@@ -168,13 +168,13 @@ public class CatalogService : ICatalogService
     {
         // var rate = await _itemRateRepository.GetApplicableRateAsync(item.Id, rentalDays);
         var response = item;
-        if(parentItem != null)
+        if (parentItem != null)
         {
             response = parentItem;
         }
         // var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{item.Id}"); // Adjust the endpoint as necessary
         // if (response == null || response.Data == null)
-            // throw new InvalidOperationException($"Failed to retrieve item with ID {item.Id} from Item Service.");
+        // throw new InvalidOperationException($"Failed to retrieve item with ID {item.Id} from Item Service.");
         var applicableRate = null as ItemRateResponseDto;
         foreach (var rate in response.Rates!)
         {
