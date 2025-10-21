@@ -35,7 +35,7 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<List<RentalOrderListDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("bookings/{storeid}")]
+    [HttpGet("bookings")]
     [Authorize(Roles = "Employee,Manager,Admin")]
     public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings()
     {
@@ -44,7 +44,7 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("rents/{storeid}")]
+    [HttpGet("rents")]
     [Authorize(Roles = "Employee,Manager,Admin")]
     public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents()
     {
