@@ -17,12 +17,12 @@ public class RentalOrderProfile : Profile
             .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.RentalOrderItems))
             .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.RentalOrderPackages));
         CreateMap<Item, RentalOrderItemDto>()
-            .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => SafeToNullableInt(src.ItemId)));
+            .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId));
         CreateMap<Package, RentalOrderPackageDto>()
-            .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => SafeToNullableInt(src.PackageId)))
+            .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => src.PackageId))
             .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.PackageItems));
         CreateMap<PackageItem, RentalOrderPackageItemDto>()
-           .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => SafeToNullableInt(src.ItemId)));
+           .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId));
 
         // CreateMap<RentalOrderMongoDB, RentalOrderResponseDto>()
         //         .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
@@ -103,7 +103,19 @@ public class RentalOrderProfile : Profile
             .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.SelectedItemId ?? string.Empty));
         // .ForMember(dest => dest.QuantityPerPackageSnapshot, opt => opt.Ignore());
 
-
+        CreateMap<RentalOrderResponseDto, RentalOrderMongoDB>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.Channel, opt => opt.MapFrom(src => src.Channel.ToString()))
+            .ForMember(dest => dest.PaymentType, opt => opt.MapFrom(src => src.PaymentType.ToString()))
+            .ForMember(dest => dest.RentalOrderItems, opt => opt.MapFrom(src => src.Items))
+            .ForMember(dest => dest.RentalOrderPackages, opt => opt.MapFrom(src => src.Packages));
+        CreateMap<RentalOrderItemDto, Item>()
+            .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId));
+        CreateMap<RentalOrderPackageDto, Package>()
+            .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => src.PackageId))
+            .ForMember(dest => dest.PackageItems, opt => opt.MapFrom(src => src.Items));
+        CreateMap<RentalOrderPackageItemDto, PackageItem>()
+           .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId));
         // Create → Entity (request DTO → entity)
         // CreateMap<CreateRentalOrderRequestDto, RentalOrderMongoDB>()
         //     .ForMember(dest => dest.RentalOrderItems, opt => opt.Ignore())

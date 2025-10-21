@@ -37,21 +37,20 @@ public class RentalOrderController : ControllerBase
 
     [HttpGet("bookings/{storeid}")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings(int storeid)
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings()
     {
         var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled, RentalStatus.PendingPayment };
-
-        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses, storeid);
+        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
     [HttpGet("rents/{storeid}")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents(int storeid)
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents()
     {
         var rentStatuses = new[] { RentalStatus.Rented };
 
-        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses, storeid);
+        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 

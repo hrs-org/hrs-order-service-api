@@ -57,8 +57,9 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<IEnumerable<RentalOrderListDto>>(orders);
     }
 
-    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses, int storeId)
+    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses)
     {
+        var storeId = _userContextService.GetStoreId();
         var orders = await _rentalOrderMongoDBRepository.GetByStatusesAndStoreId(statuses, storeId);
         return _mapper.Map<IEnumerable<RentalOrderResponseDto>>(orders);
     }
@@ -130,7 +131,7 @@ public class RentalOrderService : IRentalOrderService
                 var ParentId = item.ParentId;
                 var applicableRate = null as ItemRateResponseDto;
                 var parentResponse = null as ApiResponse<ItemResponseDto>;
-                if (ParentId != null)
+                if (ParentId != item.Id)
                 {
                     parentResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{ParentId}"); // Adjust the endpoint as necessary
                     if (parentResponse == null || parentResponse.Data == null)
@@ -204,38 +205,38 @@ public class RentalOrderService : IRentalOrderService
                     Quantity = pkgDto.Quantity
                 };
 
-                foreach (var pi in pkg.Data.Items)
-                {
+                // foreach (var pi in pkg.Data.Items)
+                // {
 
-                    // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
-                    //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                    var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/item/{pi.ItemId}"); // Adjust the endpoint as necessary
-                    if (itemResponse == null || itemResponse.Data == null)
-                        throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                    var item = itemResponse.Data;
-                    var finalItem = item;
-                    var selectedItemId = pkgDto.SelectedItems?
-                        .FirstOrDefault(si => si.PackageItemId == pi.ItemId)?.SelectedItemId;
+                //     // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
+                //     //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
+                //     var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{pi.ItemId}"); // Adjust the endpoint as necessary
+                //     if (itemResponse == null || itemResponse.Data == null)
+                //         throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
+                //     var item = itemResponse.Data;
+                //     var finalItem = item;
+                //     var selectedItemId = item.Children?
+                //         .FirstOrDefault(si => si.Id == pi.ItemId)?.Id;
 
-                    if (item?.Children?.Count != 0)
-                    {
-                        if (selectedItemId == null)
-                            throw new InvalidOperationException($"Variant required for item '{item?.Name}' in package '{pkg.Data.Name}'.");
+                //     if (item?.Children?.Count != 0)
+                //     {
+                //         if (selectedItemId == null)
+                //             throw new InvalidOperationException($"Variant required for item '{item?.Name}' in package '{pkg.Data.Name}'.");
 
-                        var selectedChild = item?.Children?.FirstOrDefault(c => c.Id == selectedItemId)
-                                            ?? throw new InvalidOperationException($"Invalid variant selection for '{item?.Name}'.");
+                //         var selectedChild = item?.Children?.FirstOrDefault(c => c.Id == selectedItemId)
+                //                             ?? throw new InvalidOperationException($"Invalid variant selection for '{item?.Name}'.");
 
-                        finalItem = selectedChild;
-                    }
-                    if (finalItem == null)
-                        throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                    rentalPkg.PackageItems.Add(new PackageItem
-                    {
-                        ItemId = finalItem.Id,
-                        ItemNameSnapshot = finalItem.Name,
-                        QuantityPerPackageSnapshot = pi.Quantity
-                    });
-                }
+                //         finalItem = selectedChild;
+                //     }
+                //     if (finalItem == null)
+                //         throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
+                //     rentalPkg.PackageItems.Add(new PackageItem
+                //     {
+                //         ItemId = finalItem.Id,
+                //         ItemNameSnapshot = finalItem.Name,
+                //         QuantityPerPackageSnapshot = pi.Quantity
+                //     });
+                // }
 
                 entity.RentalOrderPackages.Add(rentalPkg);
                 totalAmount += dailyRate * pkgDto.Quantity * rentalDays;
@@ -249,7 +250,7 @@ public class RentalOrderService : IRentalOrderService
 
         if (entity.PaymentType == OrderPaymentType.Cash)
         {
-            var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
+            var paymentId = await _paymentClient.PostAsJsonAsync("/api/payments", new
             {
                 OrderId = entity.Id,
                 Amount = entity.TotalAmount,
@@ -263,7 +264,9 @@ public class RentalOrderService : IRentalOrderService
                 throw new InvalidOperationException("Failed to record cash payment.");
             }
 
-            entity.PaymentId = await paymentId.Content.ReadAsStringAsync();
+            var payment = await paymentId.Content.ReadFromJsonAsync<ApiResponse<string>>();
+            entity.PaymentId = payment?.Data;
+
             // var payment = new Payment
             // {
             //     RentalOrderId = entity.Id,

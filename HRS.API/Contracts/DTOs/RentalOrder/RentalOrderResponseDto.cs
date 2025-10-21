@@ -5,7 +5,7 @@ namespace HRS.API.Contracts.DTOs.RentalOrder;
 public class RentalOrderItemDto
 {
     public string Id { get; set; } = string.Empty;
-    public int? ItemId { get; set; }
+    public string ItemId { get; set; } = string.Empty;
     public string ItemNameSnapshot { get; set; } = string.Empty;
     public decimal DailyRateSnapshot { get; set; }
     public int Quantity { get; set; }
@@ -14,7 +14,7 @@ public class RentalOrderItemDto
 public class RentalOrderPackageDto
 {
     public string Id { get; set; } = string.Empty;
-    public int? PackageId { get; set; }
+    public string PackageId { get; set; } = string.Empty;
     public string PackageNameSnapshot { get; set; } = string.Empty;
     public decimal DailyRateSnapshot { get; set; }
     public int Quantity { get; set; }
@@ -25,7 +25,7 @@ public class RentalOrderPackageDto
 public class RentalOrderPackageItemDto
 {
     public string Id { get; set; } = string.Empty;
-    public int? ItemId { get; set; }
+    public string ItemId { get; set; } = string.Empty;
     public string ItemNameSnapshot { get; set; } = string.Empty;
     public int QuantityPerPackageSnapshot { get; set; }
 }
