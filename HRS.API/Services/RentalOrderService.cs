@@ -555,7 +555,7 @@ public class RentalOrderService : IRentalOrderService
 
         if (entities.Count <= 0) return;
         var batchPayload = new { Entries = entities };
-        var resp = await _itemMaintenanceClient.PostAsJsonAsync("/api/item-maintenance/batch", batchPayload);
+        var resp = await _itemMaintenanceClient.PostAsJsonAsync("/api/item-maintenances/batch", batchPayload);
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException("Failed to record item maintenance batch.");
     }
