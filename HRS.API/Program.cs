@@ -1,6 +1,7 @@
 using System.Text;
 using FluentValidation;
 using HRS.API.Filters;
+using HRS.API.Handlers;
 using HRS.API.Middleware;
 using HRS.API.Services;
 using HRS.API.Services.Interfaces;
@@ -24,7 +25,7 @@ builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IAppConfiguration, AppConfiguration>();
 builder.Services.AddHttpContextAccessor();
-
+builder.Services.AddTransient<AuthorizationHeaderHandler>();
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); });
@@ -34,15 +35,15 @@ builder.Services.AddValidatorsFromAssemblyContaining<ReturnRentalOrderRequestVal
 builder.Services.AddHttpClient("ItemMaintenanceService", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ItemMaintenanceService"]!);
-});
+}).AddHttpMessageHandler<AuthorizationHeaderHandler>();
 builder.Services.AddHttpClient("PaymentService", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["PaymentService"]!);
-});
+}).AddHttpMessageHandler<AuthorizationHeaderHandler>();
 builder.Services.AddHttpClient("ItemService", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ItemService"]!);
-});
+}).AddHttpMessageHandler<AuthorizationHeaderHandler>();
 
 // ----------------------------
 // IConfiguration & MongoClient
