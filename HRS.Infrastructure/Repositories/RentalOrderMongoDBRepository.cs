@@ -9,7 +9,7 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
 {
     private readonly IMongoCollection<RentalOrderMongoDB> _itemscollection;
     private readonly IMongoClient _client;
-    public RentalOrderMongoDBRepository(IMongoDatabase database, IMongoClient client): base(database)
+    public RentalOrderMongoDBRepository(IMongoDatabase database, IMongoClient client) : base(database)
     {
         _client = client;
         _itemscollection = database.GetCollection<RentalOrderMongoDB>("RentalOrders");
@@ -51,11 +51,11 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
     }
 
     public async Task<IClientSessionHandle> BeginTransactionAsync()
-        {
-            var session = await _client.StartSessionAsync();
-            session.StartTransaction();
-            return session;
-        }
+    {
+        var session = await _client.StartSessionAsync();
+        session.StartTransaction();
+        return session;
+    }
 
     public async Task<RentalOrderMongoDB?> GetByStripeSessionIdAsync(string sessionId) =>
         await _itemscollection.Find(ro => ro.StripeSessionId == sessionId).FirstOrDefaultAsync();

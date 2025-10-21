@@ -61,24 +61,24 @@ public class RentalOrderProfile : Profile
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow))
                 .ForMember(dest => dest.RentalOrderItems, opt => opt.MapFrom(src => src.Items))
                 .ForMember(dest => dest.RentalOrderPackages, opt => opt.MapFrom(src => src.Packages));
-                // .ForAllOtherMembers(opt => opt.Ignore());
+        // .ForAllOtherMembers(opt => opt.Ignore());
 
-            // ─────────────────────────────
-            // RentalOrderItemRequestDto → Item
-            // ─────────────────────────────
-            CreateMap<RentalOrderItemRequestDto, Item>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => ObjectId.GenerateNewId().ToString()))
-                .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId ?? string.Empty))
-                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity));
-                // .ForAllOtherMembers(opt => opt.Ignore());
+        // ─────────────────────────────
+        // RentalOrderItemRequestDto → Item
+        // ─────────────────────────────
+        CreateMap<RentalOrderItemRequestDto, Item>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => ObjectId.GenerateNewId().ToString()))
+            .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId ?? string.Empty))
+            .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity));
+        // .ForAllOtherMembers(opt => opt.Ignore());
 
-            // ─────────────────────────────
-            // RentalOrderPackageRequestDto → Package
-            // ─────────────────────────────
-            CreateMap<RentalOrderPackageRequestDto, Package>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => ObjectId.GenerateNewId().ToString()))
-                .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => src.PackageId?? string.Empty))
-                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity));
+        // ─────────────────────────────
+        // RentalOrderPackageRequestDto → Package
+        // ─────────────────────────────
+        CreateMap<RentalOrderPackageRequestDto, Package>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => ObjectId.GenerateNewId().ToString()))
+            .ForMember(dest => dest.PackageId, opt => opt.MapFrom(src => src.PackageId ?? string.Empty))
+            .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity));
 
         // ─────────────────────────────
         // RentalOrderPackageItemRequestDto → PackageItem
@@ -86,7 +86,7 @@ public class RentalOrderProfile : Profile
         CreateMap<RentalOrderPackageItemRequestDto, PackageItem>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.PackageItemId ?? ObjectId.GenerateNewId().ToString()))
             .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.SelectedItemId ?? string.Empty));
-            // .ForMember(dest => dest.QuantityPerPackageSnapshot, opt => opt.Ignore());
+        // .ForMember(dest => dest.QuantityPerPackageSnapshot, opt => opt.Ignore());
 
 
         // Create → Entity (request DTO → entity)

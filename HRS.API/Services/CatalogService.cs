@@ -14,7 +14,7 @@ public class CatalogService : ICatalogService
 
     public CatalogService(
         IAvailabilityService availabilityService,
-        IHttpClientFactory httpClientFactory )
+        IHttpClientFactory httpClientFactory)
     {
         _availabilityService = availabilityService;
         _itemClient = httpClientFactory.CreateClient("ItemService");
@@ -82,7 +82,7 @@ public class CatalogService : ICatalogService
         };
     }
 
-    private async Task<List<CatalogPackageDto>> BuildPackageNodesAsync(DateTime startDate, DateTime endDate, int rentalDays, string storeId )
+    private async Task<List<CatalogPackageDto>> BuildPackageNodesAsync(DateTime startDate, DateTime endDate, int rentalDays, string storeId)
     {
 
         // var packages = await _packageRepository.GetAllAsync();
@@ -168,7 +168,7 @@ public class CatalogService : ICatalogService
     {
         // var rate = await _itemRateRepository.GetApplicableRateAsync(item.Id, rentalDays);
         var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{item.Id}"); // Adjust the endpoint as necessary
-        if (response == null || response.Data == null )
+        if (response == null || response.Data == null)
             throw new InvalidOperationException($"Failed to retrieve item with ID {item.Id} from Item Service.");
         var applicableRate = null as ItemRateResponseDto;
         foreach (var rate in response.Data.Rates!)
@@ -185,7 +185,7 @@ public class CatalogService : ICatalogService
         if (ParentId != null)
         {
             var responseParent = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{ParentId}"); // Adjust the endpoint as necessary
-            if (responseParent == null || responseParent.Data == null )
+            if (responseParent == null || responseParent.Data == null)
                 throw new InvalidOperationException($"Failed to retrieve parent item with ID {ParentId} from Item Service.");
             var responseParentRate = null as ItemRateResponseDto;
             foreach (var rate in responseParent.Data.Rates!)
@@ -209,7 +209,7 @@ public class CatalogService : ICatalogService
     {
         // var rate = await _packageRateRepository.GetApplicableRateAsync(package.Id, rentalDays);
         var response = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{package.Id}"); // Adjust the endpoint as necessary
-        if (response == null || response.Data == null )
+        if (response == null || response.Data == null)
             throw new InvalidOperationException($"Failed to retrieve package with ID {package.Id} from Item Service.");
         var applicableRate = null as PackageRateResponseDto;
         foreach (var dummyRate in response.Data.Rates!)

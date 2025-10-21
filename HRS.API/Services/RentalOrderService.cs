@@ -57,7 +57,7 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<IEnumerable<RentalOrderListDto>>(orders);
     }
 
-    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses,string storeId )
+    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses, string storeId)
     {
         var orders = await _rentalOrderMongoDBRepository.GetByStatusesAndStoreId(statuses, storeId);
         return _mapper.Map<IEnumerable<RentalOrderResponseDto>>(orders);
@@ -152,14 +152,14 @@ public class RentalOrderService : IRentalOrderService
                     }
                     else
                     {
-                            foreach (var dummyRate in item.Rates!)
+                        foreach (var dummyRate in item.Rates!)
+                        {
+                            if (dummyRate.MinDays <= rentalDays)
                             {
-                                if (dummyRate.MinDays <= rentalDays)
-                                {
-                                    applicableRate = dummyRate;
-                                }
-
+                                applicableRate = dummyRate;
                             }
+
+                        }
                     }
                     // var rate = await _itemRateRepository.GetApplicableRateAsync(item.Parent?.Id ?? item.Id, rentalDays);
                     // var rateResponse = await _itemClient.GetFromJsonAsync<ItemRateResponseDto>($"/api/itemrate/getapplicablerate/{(ParentId.HasValue ? ParentId.Value : item.Id)}/{rentalDays}"); // Adjust the endpoint as necessary
@@ -190,13 +190,13 @@ public class RentalOrderService : IRentalOrderService
                     // var rate = await _packageRateRepository.GetApplicableRateAsync(pkg.Id, rentalDays);
                     var rate = null as PackageRateResponseDto;
                     foreach (var dummyRate in pkg.Data.Rates!)
+                    {
+                        if (dummyRate.MinDays <= rentalDays)
                         {
-                            if (dummyRate.MinDays <= rentalDays)
-                            {
-                                rate = dummyRate;
-                            }
-
+                            rate = dummyRate;
                         }
+
+                    }
                     var dailyRate = rate?.DailyRate ?? pkg.Data.BasePrice;
 
                     var rentalPkg = new Package
@@ -213,7 +213,7 @@ public class RentalOrderService : IRentalOrderService
                         // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
                         //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
                         var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/item/{pi.ItemId}"); // Adjust the endpoint as necessary
-                        if(itemResponse == null || itemResponse.Data == null)
+                        if (itemResponse == null || itemResponse.Data == null)
                             throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
                         var item = itemResponse.Data;
                         var finalItem = item;
@@ -222,7 +222,7 @@ public class RentalOrderService : IRentalOrderService
 
                         if (item?.Children?.Count != 0)
                         {
-                            if (selectedItemId== null)
+                            if (selectedItemId == null)
                                 throw new InvalidOperationException($"Variant required for item '{item?.Name}' in package '{pkg.Data.Name}'.");
 
                             var selectedChild = item?.Children?.FirstOrDefault(c => c.Id == selectedItemId)
@@ -317,16 +317,16 @@ public class RentalOrderService : IRentalOrderService
                 throw new DuplicateNameException("Payment has already been recorded for this order.");
 
             var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
-                {
-                    OrderId = order.Id,
-                    Amount = (decimal)(amount ?? 0) / 100,
-                    SessionId = sessionId,
-                    PaymentType = 0, // stripe
-                    Status = 1, // Completed
-                });
-                if (!paymentId.IsSuccessStatusCode)
-                    throw new InvalidOperationException("Failed to record stripe payment.");
-                order.PaymentId = await paymentId.Content.ReadAsStringAsync();
+            {
+                OrderId = order.Id,
+                Amount = (decimal)(amount ?? 0) / 100,
+                SessionId = sessionId,
+                PaymentType = 0, // stripe
+                Status = 1, // Completed
+            });
+            if (!paymentId.IsSuccessStatusCode)
+                throw new InvalidOperationException("Failed to record stripe payment.");
+            order.PaymentId = await paymentId.Content.ReadAsStringAsync();
 
 
 
@@ -559,7 +559,7 @@ public class RentalOrderService : IRentalOrderService
 
     private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, string storeId)
     {
-        if (itemId == null ) return;
+        if (itemId == null) return;
 
         // Extract quantities from DTO
         int repairQty, damagedQty, lostQty;
@@ -600,7 +600,7 @@ public class RentalOrderService : IRentalOrderService
         // --- BROKEN ---
         if (damagedQty > 0)
         {
-           entities.Add(new { ItemId = item.Data.Id, RentalOrderId = orderId, Type = 3, Quantity = damagedQty, Remarks = "Auto-generated broken record on return" });
+            entities.Add(new { ItemId = item.Data.Id, RentalOrderId = orderId, Type = 3, Quantity = damagedQty, Remarks = "Auto-generated broken record on return" });
             item.Data.Quantity = Math.Max(0, item.Data.Quantity - damagedQty);
         }
 

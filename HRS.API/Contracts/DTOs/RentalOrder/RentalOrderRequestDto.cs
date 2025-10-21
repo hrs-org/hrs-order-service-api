@@ -58,7 +58,7 @@ public class ReturnRentalOrderRequestDto
 
 public class ReturnItemConditionDto
 {
-    public string RentalOrderItemId { get; set; }   = string.Empty;
+    public string RentalOrderItemId { get; set; } = string.Empty;
 
     public int GoodQty { get; set; }
     public int RepairQty { get; set; }
@@ -104,4 +104,4 @@ public class UpdateItemRequestDto
     public ICollection<ItemResponseDto>? Children { get; set; }
     public bool HasChildren => Children?.Count > 0;
 
-    };
+};

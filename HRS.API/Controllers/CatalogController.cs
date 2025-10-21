@@ -8,7 +8,7 @@ namespace HRS.API.Controllers;
 
 [ApiController]
 [Route("api/catalogs")]
-// [Authorize]
+[Authorize]
 public class CatalogController : ControllerBase
 {
     private readonly ICatalogService _catalogService;

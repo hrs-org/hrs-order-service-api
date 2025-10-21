@@ -42,22 +42,22 @@ public class RentalOrderMongoDB
     public Collection<Item> RentalOrderItems { get; set; } = new();
     public Collection<Package> RentalOrderPackages { get; set; } = new();
 }
-    public class Item
-    {
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
-        public string ItemId { get; set; } = null!;
-        public string ItemNameSnapshot { get; set; } = null!;
-        public decimal DailyRateSnapshot { get; set; }
-        public int Quantity { get; set; }
-        public int GoodQty { get; set; }
-        public int RepairQty { get; set; }
-        public int DamagedQty { get; set; }
-        public int LostQty { get; set; }
-        public bool HasIssues { get; set; }
+public class Item
+{
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
+    public string ItemId { get; set; } = null!;
+    public string ItemNameSnapshot { get; set; } = null!;
+    public decimal DailyRateSnapshot { get; set; }
+    public int Quantity { get; set; }
+    public int GoodQty { get; set; }
+    public int RepairQty { get; set; }
+    public int DamagedQty { get; set; }
+    public int LostQty { get; set; }
+    public bool HasIssues { get; set; }
 
 
-        public void SetReturnConditions(int good, int repair, int damaged, int lost)
+    public void SetReturnConditions(int good, int repair, int damaged, int lost)
     {
         if (good + repair + damaged + lost != Quantity)
             throw new InvalidOperationException("Condition totals must match quantity.");
@@ -66,7 +66,7 @@ public class RentalOrderMongoDB
         DamagedQty = damaged;
         LostQty = lost;
     }
-    }
+}
 
 public class Package
 {
@@ -78,19 +78,19 @@ public class Package
     public int Quantity { get; set; }
     public Collection<PackageItem> PackageItems { get; set; } = new();
 }
-        public class PackageItem
-        {
-            [BsonRepresentation(BsonType.ObjectId)]
-            public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
-            public string ItemId { get; set; } = null!;
-            public string ItemNameSnapshot { get; set; } = null!;
-            public int QuantityPerPackageSnapshot { get; set; }
-            public int GoodQty { get; set; }
-            public int RepairQty { get; set; }
-            public int DamagedQty { get; set; }
-            public int LostQty { get; set; }
-            public bool HasIssues { get; set; }
-        }
+public class PackageItem
+{
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
+    public string ItemId { get; set; } = null!;
+    public string ItemNameSnapshot { get; set; } = null!;
+    public int QuantityPerPackageSnapshot { get; set; }
+    public int GoodQty { get; set; }
+    public int RepairQty { get; set; }
+    public int DamagedQty { get; set; }
+    public int LostQty { get; set; }
+    public bool HasIssues { get; set; }
+}
 
 
 
