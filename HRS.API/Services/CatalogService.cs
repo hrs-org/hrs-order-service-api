@@ -24,8 +24,9 @@ public class CatalogService : ICatalogService
     {
         var rentalDays = Math.Max(1, (endDate.Date - startDate.Date).Days);
         // var rootItems = await _itemRepository.GetRootItemsAsync();
-        var response = await _itemClient.GetFromJsonAsync<ApiResponse<List<ItemResponseDto>>>($"/api/items?storeId={storeId}"); // Adjust the endpoint as necessary
-        if (response == null || response.Data == null || response.Data.Count == 0)
+        Console.WriteLine($"Fetching root items for storeId: {storeId}");
+        var response = await _itemClient.GetFromJsonAsync<ApiResponse<IEnumerable<ItemResponseDto>>>($"/api/items?storeId={storeId}"); // Adjust the endpoint as necessary
+        if (response == null || response.Data == null )
             throw new InvalidOperationException("Failed to retrieve root items from Item Service.");
         var rootItems = response.Data;
         var itemNodes = new List<CatalogItemNodeDto>();
@@ -43,12 +44,12 @@ public class CatalogService : ICatalogService
         };
     }
 
-    private async Task<CatalogItemNodeDto> BuildItemNodeAsync(ItemResponseDto item, DateTime startDate, DateTime endDate, int rentalDays)
+    private async Task<CatalogItemNodeDto> BuildItemNodeAsync(ItemResponseDto item, DateTime startDate, DateTime endDate, int rentalDays, ItemResponseDto? parentItem = null)
     {
         if (item.Children?.Count == 0)
         {
             var available = await _availabilityService.GetAvailableQuantityAsync(item.Id, startDate, endDate);
-            var dailyRate = await ResolveItemDailyRateAsync(item, rentalDays);
+            var dailyRate = await ResolveItemDailyRateAsync(item, rentalDays,parentItem);
 
             return new CatalogItemNodeDto
             {
@@ -65,7 +66,7 @@ public class CatalogService : ICatalogService
         if (item.Children == null) throw new InvalidOperationException("BuildItemNode:Item children cannot be null here.");
         foreach (var child in item.Children)
         {
-            var childNode = await BuildItemNodeAsync(child, startDate, endDate, rentalDays);
+            var childNode = await BuildItemNodeAsync(child, startDate, endDate, rentalDays, item);
             childrenDtos.Add(childNode);
             totalAvailable += childNode.AvailableQuantity;
         }
@@ -163,14 +164,19 @@ public class CatalogService : ICatalogService
         return storePackages;
     }
 
-    private async Task<decimal> ResolveItemDailyRateAsync(ItemResponseDto item, int rentalDays)
+    private async Task<decimal> ResolveItemDailyRateAsync(ItemResponseDto item, int rentalDays, ItemResponseDto? parentItem = null)
     {
         // var rate = await _itemRateRepository.GetApplicableRateAsync(item.Id, rentalDays);
-        var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{item.Id}"); // Adjust the endpoint as necessary
-        if (response == null || response.Data == null)
-            throw new InvalidOperationException($"Failed to retrieve item with ID {item.Id} from Item Service.");
+        var response = item;
+        if(parentItem != null)
+        {
+            response = parentItem;
+        }
+        // var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{item.Id}"); // Adjust the endpoint as necessary
+        // if (response == null || response.Data == null)
+            // throw new InvalidOperationException($"Failed to retrieve item with ID {item.Id} from Item Service.");
         var applicableRate = null as ItemRateResponseDto;
-        foreach (var rate in response.Data.Rates!)
+        foreach (var rate in response.Rates!)
         {
             if (rate.MinDays <= rentalDays)
             {
@@ -180,7 +186,7 @@ public class CatalogService : ICatalogService
         }
         if (applicableRate != null)
             return applicableRate.DailyRate;
-        var ParentId = response.Data.ParentId;
+        var ParentId = response.ParentId;
         if (ParentId != null)
         {
             var responseParent = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{ParentId}"); // Adjust the endpoint as necessary
