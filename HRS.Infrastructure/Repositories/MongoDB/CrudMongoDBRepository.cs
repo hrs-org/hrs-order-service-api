@@ -14,7 +14,7 @@ public class CrudMongoDBRepository<T> : ICrudMongoDBRepository<T> where T : clas
         _collection = database.GetCollection<T>(typeof(T).Name);
     }
 
-    public async Task<T?> GetByIdAsync(object id) =>
+    public async Task<T?> GetByIdAsync(string id) =>
         await _collection.Find(Builders<T>.Filter.Eq("Id", id)).FirstOrDefaultAsync();
 
     public async Task<IEnumerable<T>> GetAllAsync() =>
@@ -29,15 +29,15 @@ public class CrudMongoDBRepository<T> : ICrudMongoDBRepository<T> where T : clas
     public async Task AddRangeAsync(IEnumerable<T> entities) =>
         await _collection.InsertManyAsync(entities);
 
-    public async Task UpdateAsync(T entity, object id) =>
+    public async Task UpdateAsync(T entity, string id) =>
         await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("Id", id), entity);
 
-    public async Task RemoveAsync(object id) =>
+    public async Task RemoveAsync(string id) =>
         await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("Id", id));
 
-    public async Task RemoveRangeAsync(IEnumerable<object> ids) =>
+    public async Task RemoveRangeAsync(IEnumerable<string> ids) =>
         await _collection.DeleteManyAsync(Builders<T>.Filter.In("Id", ids));
 
-    public async Task UpdateStatusByOrderIdAsync(int orderId, RentalStatus status) =>
+    public async Task UpdateStatusByOrderIdAsync(string orderId, RentalStatus status) =>
         await _collection.UpdateManyAsync(Builders<T>.Filter.Eq("RentalOrderId", orderId), Builders<T>.Update.Set("RentalOrderStatus", status));
 }

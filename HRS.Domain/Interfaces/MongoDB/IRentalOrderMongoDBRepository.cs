@@ -12,4 +12,5 @@ public interface IRentalOrderMongoDBRepository : ICrudMongoDBRepository<RentalOr
     Task<IEnumerable<RentalOrderMongoDB>> GetByStatusesWithDetailsAsync(RentalStatus[] statuses);
     Task<IClientSessionHandle> BeginTransactionAsync();
     Task<RentalOrderMongoDB?> GetByStripeSessionIdAsync(string sessionId);
+    Task<IEnumerable<RentalOrderMongoDB>> GetByStatusesAndStoreId(RentalStatus[] statuses, string storeId);
 }

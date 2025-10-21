@@ -16,7 +16,8 @@ public class RentalOrderProfile : Profile
                 .ForMember(dest => dest.Channel, opt => opt.MapFrom(src => src.Channel.ToString()))
                 .ForMember(dest => dest.PaymentType, opt => opt.MapFrom(src => src.PaymentType.ToString()))
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.RentalOrderItems))
-                .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.RentalOrderPackages));
+                .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.RentalOrderPackages))
+                .ForMember(dest => dest.StoreId, opt => opt.MapFrom(src => src.StoreId));
         CreateMap<Item, RentalOrderItemDto>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.ItemId))
@@ -48,10 +49,11 @@ public class RentalOrderProfile : Profile
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.ApprovedAt, opt => opt.MapFrom(src => src.ApprovedAt))
                 .ForMember(dest => dest.ReturnedAt, opt => opt.MapFrom(src => src.ReturnedAt))
-                .ForMember(dest => dest.ClosedAt, opt => opt.MapFrom(src => src.ClosedAt));
+                .ForMember(dest => dest.ClosedAt, opt => opt.MapFrom(src => src.ClosedAt))
+                .ForMember(dest => dest.StoreId, opt => opt.MapFrom(src => src.StoreId));
 
         CreateMap<CreateRentalOrderRequestDto, RentalOrderMongoDB>()
-                .ForMember(dest => dest.RentalOrderId, opt => opt.Ignore())
+                .ForMember(dest => dest.StoreId, opt => opt.MapFrom(src => src.StoreId))
                 .ForMember(dest => dest.GuestName, opt => opt.MapFrom(src => src.GuestName ?? string.Empty))
                 .ForMember(dest => dest.GuestPhone, opt => opt.MapFrom(src => src.GuestPhone ?? string.Empty))
                 .ForMember(dest => dest.GuestEmail, opt => opt.MapFrom(src => src.GuestEmail ?? string.Empty))

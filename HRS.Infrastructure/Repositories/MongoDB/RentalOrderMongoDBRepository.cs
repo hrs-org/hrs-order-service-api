@@ -59,6 +59,16 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
 
     public async Task<RentalOrderMongoDB?> GetByStripeSessionIdAsync(string sessionId) =>
         await _itemscollection.Find(ro => ro.StripeSessionId == sessionId).FirstOrDefaultAsync();
+
+    public async Task<IEnumerable<RentalOrderMongoDB>> GetByStatusesAndStoreId(RentalStatus[] statuses, string storeId)
+    {
+        var filter = Builders<RentalOrderMongoDB>.Filter.And(
+            Builders<RentalOrderMongoDB>.Filter.In(ro => ro.Status, statuses),
+            Builders<RentalOrderMongoDB>.Filter.Eq(ro => ro.StoreId, storeId)
+        );
+        return await _itemscollection.Find(filter).ToListAsync();
+    }
+
 }
 
 

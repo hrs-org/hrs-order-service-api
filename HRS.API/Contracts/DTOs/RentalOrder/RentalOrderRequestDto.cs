@@ -30,6 +30,7 @@ public class CreateRentalOrderRequestDto
     [MaxLength(150)] public string? GuestName { get; set; }
     [MaxLength(50)] public string? GuestPhone { get; set; }
     [MaxLength(150)] public string? GuestEmail { get; set; }
+    [MaxLength(100)] public string StoreId { get; set; } = string.Empty;
 
     [Required] public DateTime StartDate { get; set; }
     [Required] public DateTime EndDate { get; set; }
@@ -82,7 +83,7 @@ public class ReturnPackageItemConditionDto
 }
 public class AssignStripeSessionRequest
 {
-    public int OrderId { get; set; }
+    public string OrderId { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
 }
 public class ApprovePaymentRequest

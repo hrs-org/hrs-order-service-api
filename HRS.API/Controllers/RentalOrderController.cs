@@ -35,23 +35,23 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<List<RentalOrderListDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("bookings")]
+    [HttpGet("bookings/{storeid}")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings()
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings(string storeid)
     {
         var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled, RentalStatus.PendingPayment };
 
-        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses);
+        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses, storeid);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("rents")]
+    [HttpGet("rents/{storeid}")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents()
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents(string storeid)
     {
         var rentStatuses = new[] { RentalStatus.Rented };
 
-        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses);
+        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses, storeid);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
@@ -73,41 +73,41 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order approved successfully"));
     }
 
-    [HttpPut("{id:int}/approve")]
+    [HttpPut("{id:string}/approve")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> Approve(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> Approve(string id)
     {
         var result = await _rentalOrderService.ApproveAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order approved successfully"));
     }
 
-    [HttpPut("{id:int}/cancel")]
+    [HttpPut("{id:string}/cancel")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> CancelOrder(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> CancelOrder(string id)
     {
         var result = await _rentalOrderService.CancelAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order cancelled successfully"));
     }
 
-    [HttpPut("{id:int}/confirm")]
+    [HttpPut("{id:string}/confirm")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> MarkAsRented(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> MarkAsRented(string id)
     {
         var result = await _rentalOrderService.MarkAsRentedAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order marked as rented successfully"));
     }
 
-    [HttpPut("{id:int}/return")]
+    [HttpPut("{id:string}/return")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> Return(int id, [FromBody] ReturnRentalOrderRequestDto dto)
+    public async Task<ActionResult<RentalOrderResponseDto>> Return(string id, [FromBody] ReturnRentalOrderRequestDto dto)
     {
         var result = await _rentalOrderService.ReturnAsync(id, dto);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order returned successfully"));
     }
 
-    [HttpPut("{id:int}/close")]
+    [HttpPut("{id:string}/close")]
     // [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderResponseDto>> Close(int id)
+    public async Task<ActionResult<RentalOrderResponseDto>> Close(string id)
     {
         var result = await _rentalOrderService.CloseAsync(id);
         return Ok(ApiResponse<RentalOrderResponseDto>.OkResponse(result, "Order closed successfully"));

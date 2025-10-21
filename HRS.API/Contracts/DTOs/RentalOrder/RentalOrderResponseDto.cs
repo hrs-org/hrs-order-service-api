@@ -35,6 +35,7 @@ public class RentalOrderResponseDto
     public string Id { get; set; }= string.Empty;
 
     public int? CustomerId { get; set; }
+    public string StoreId { get; set; } = string.Empty;
     public string? GuestName { get; set; }
     public string? GuestPhone { get; set; }
     public string? GuestEmail { get; set; }
@@ -59,7 +60,7 @@ public class RentalOrderResponseDto
 public class RentalOrderListDto
 {
     public string Id { get; set; } = string.Empty;
-
+    public string StoreId { get; set; } = string.Empty;
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
 

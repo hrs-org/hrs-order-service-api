@@ -57,9 +57,9 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<IEnumerable<RentalOrderListDto>>(orders);
     }
 
-    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses)
+    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses,string storeId )
     {
-        var orders = await _rentalOrderMongoDBRepository.GetByStatusesWithDetailsAsync(statuses);
+        var orders = await _rentalOrderMongoDBRepository.GetByStatusesAndStoreId(statuses, storeId);
         return _mapper.Map<IEnumerable<RentalOrderResponseDto>>(orders);
     }
 
@@ -290,7 +290,7 @@ public class RentalOrderService : IRentalOrderService
 
 
     // add controller for this method
-    public async Task AssignStripeSessionIdAsync(int orderId, string sessionId)
+    public async Task AssignStripeSessionIdAsync(string orderId, string sessionId)
     {
         // Console.WriteLine($"Assigning Stripe Session ID: {sessionId} to Order ID: {orderId}");
         var order = await _rentalOrderMongoDBRepository.GetByIdAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
@@ -361,7 +361,7 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-    public async Task<RentalOrderResponseDto> ApproveAsync(int id)
+    public async Task<RentalOrderResponseDto> ApproveAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
 
@@ -393,7 +393,7 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-    public async Task<RentalOrderResponseDto> CancelAsync(int id)
+    public async Task<RentalOrderResponseDto> CancelAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
 
@@ -425,7 +425,7 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-    public async Task<RentalOrderResponseDto> MarkAsRentedAsync(int id)
+    public async Task<RentalOrderResponseDto> MarkAsRentedAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
 
@@ -455,7 +455,7 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-    public async Task<RentalOrderResponseDto> ReturnAsync(int id, ReturnRentalOrderRequestDto dto)
+    public async Task<RentalOrderResponseDto> ReturnAsync(string id, ReturnRentalOrderRequestDto dto)
     {
         var user = await _userContextService.GetUserAsync();
         using var tx = await _rentalOrderMongoDBRepository.BeginTransactionAsync();
@@ -484,7 +484,7 @@ public class RentalOrderService : IRentalOrderService
                         itemCondition.LostQty
                     );
 
-                    await HandleMaintenanceAsync(orderItem.ItemId, order.Id, itemCondition, user.Id);
+                    await HandleMaintenanceAsync(orderItem.ItemId, order.Id, itemCondition, user.Id, order.StoreId);
                 }
 
             if (dto.Packages != null)
@@ -505,7 +505,7 @@ public class RentalOrderService : IRentalOrderService
                         orderPkgItem.DamagedQty = pkgItemDto.DamagedQty;
                         orderPkgItem.LostQty = pkgItemDto.LostQty;
 
-                        await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id);
+                        await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id, order.StoreId);
                     }
                 }
 
@@ -536,7 +536,7 @@ public class RentalOrderService : IRentalOrderService
     }
 
 
-    public async Task<RentalOrderResponseDto> CloseAsync(int id)
+    public async Task<RentalOrderResponseDto> CloseAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
 
@@ -557,7 +557,7 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<RentalOrderResponseDto>(order);
     }
 
-    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId,string? storeId=null)
+    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, string storeId)
     {
         if (itemId == null ) return;
 
@@ -655,7 +655,7 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-    /// guide line for create set of DB
+
 
 
 
