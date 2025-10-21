@@ -67,220 +67,220 @@ public class RentalOrderService : IRentalOrderService
     {
         var user = await _userContextService.GetUserAsync();
 
-            if (dto.StartDate >= dto.EndDate)
-                throw new InvalidOperationException("End date must be after start date.");
+        if (dto.StartDate >= dto.EndDate)
+            throw new InvalidOperationException("End date must be after start date.");
 
-            var rentalDays = Math.Max(1, (dto.EndDate - dto.StartDate).Days);
+        var rentalDays = Math.Max(1, (dto.EndDate - dto.StartDate).Days);
 
-            if (dto.Items is not null)
-                foreach (var itemDto in dto.Items)
+        if (dto.Items is not null)
+            foreach (var itemDto in dto.Items)
+            {
+                var available = await _availabilityService.GetAvailableQuantityAsync(
+                    itemDto.ItemId, dto.StartDate, dto.EndDate);
+
+                if (available < itemDto.Quantity)
+                    throw new InvalidOperationException(
+                        $"Item '{itemDto.ItemId}' not available. Requested {itemDto.Quantity}, available {available}.");
+            }
+
+        if (dto.Packages is not null)
+            foreach (var pkgDto in dto.Packages)
+            {
+                // var pkg = await _packageRepository.GetByIdWithItemsAsync(pkgDto.PackageId)
+                //           ?? throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
+                var pkgResponse = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
+                if (pkgResponse == null || pkgResponse.Data == null || pkgResponse.Data.Items == null)
+                    throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
+                var pkg = pkgResponse.Data;
+                foreach (var pi in pkg.Items)
                 {
-                    var available = await _availabilityService.GetAvailableQuantityAsync(
-                        itemDto.ItemId, dto.StartDate, dto.EndDate);
+                    var required = pi.Quantity * pkgDto.Quantity;
+                    var available = await _availabilityService.GetAvailableQuantityAsync(pi.ItemId, dto.StartDate, dto.EndDate);
 
-                    if (available < itemDto.Quantity)
+                    if (available < required)
                         throw new InvalidOperationException(
-                            $"Item '{itemDto.ItemId}' not available. Requested {itemDto.Quantity}, available {available}.");
+                            $"Package '{pkg.Name}' unavailable — insufficient '{pi.ItemName}' (required {required}, available {available}).");
                 }
+            }
 
-            if (dto.Packages is not null)
-                foreach (var pkgDto in dto.Packages)
+        // var entity = _mapper.Map<RentalOrder>(dto);
+        var entity = _mapper.Map<RentalOrderMongoDB>(dto);
+        entity.CreatedById = user.Id;
+        entity.CreatedAt = DateTime.UtcNow;
+        entity.UpdatedById = user.Id;
+        entity.UpdatedAt = DateTime.UtcNow;
+        entity.Status =
+            entity is { PaymentType: OrderPaymentType.Cash, Channel: OrderChannel.POS }
+                ? RentalStatus.Rented
+                : entity is { PaymentType: OrderPaymentType.Cash, Channel: OrderChannel.Manual }
+                    ? RentalStatus.Booked
+                    : RentalStatus.PendingPayment;
+
+        var totalAmount = 0m;
+
+        if (dto.Items is not null)
+            foreach (var itemDto in dto.Items)
+            {
+                // var item = await _itemRepository.GetByIdWithParentAsync(itemDto.ItemId)
+                //            ?? throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
+                var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemDto.ItemId}"); // Adjust the endpoint as necessary
+                var item = itemResponse?.Data;
+                if (item == null)
+                    throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
+                var ParentId = item.ParentId;
+                var applicableRate = null as ItemRateResponseDto;
+                var parentResponse = null as ApiResponse<ItemResponseDto>;
+                if (ParentId != null)
                 {
-                    // var pkg = await _packageRepository.GetByIdWithItemsAsync(pkgDto.PackageId)
-                    //           ?? throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
-                    var pkgResponse = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
-                    if (pkgResponse == null || pkgResponse.Data == null || pkgResponse.Data.Items == null)
-                        throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
-                    var pkg = pkgResponse.Data;
-                    foreach (var pi in pkg.Items)
-                    {
-                        var required = pi.Quantity * pkgDto.Quantity;
-                        var available = await _availabilityService.GetAvailableQuantityAsync(pi.ItemId, dto.StartDate, dto.EndDate);
-
-                        if (available < required)
-                            throw new InvalidOperationException(
-                                $"Package '{pkg.Name}' unavailable — insufficient '{pi.ItemName}' (required {required}, available {available}).");
-                    }
-                }
-
-            // var entity = _mapper.Map<RentalOrder>(dto);
-            var entity = _mapper.Map<RentalOrderMongoDB>(dto);
-            entity.CreatedById = user.Id;
-            entity.CreatedAt = DateTime.UtcNow;
-            entity.UpdatedById = user.Id;
-            entity.UpdatedAt = DateTime.UtcNow;
-            entity.Status =
-                entity is { PaymentType: OrderPaymentType.Cash, Channel: OrderChannel.POS }
-                    ? RentalStatus.Rented
-                    : entity is { PaymentType: OrderPaymentType.Cash, Channel: OrderChannel.Manual }
-                        ? RentalStatus.Booked
-                        : RentalStatus.PendingPayment;
-
-            var totalAmount = 0m;
-
-            if (dto.Items is not null)
-                foreach (var itemDto in dto.Items)
-                {
-                    // var item = await _itemRepository.GetByIdWithParentAsync(itemDto.ItemId)
-                    //            ?? throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
-                    var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemDto.ItemId}"); // Adjust the endpoint as necessary
-                    var item = itemResponse?.Data;
-                    if (item == null)
-                        throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
-                    var ParentId = item.ParentId;
-                    var applicableRate = null as ItemRateResponseDto;
-                    var parentResponse = null as ApiResponse<ItemResponseDto>;
-                    if (ParentId != null)
-                    {
-                        parentResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{ParentId}"); // Adjust the endpoint as necessary
-                        if (parentResponse == null || parentResponse.Data == null)
-                            throw new KeyNotFoundException($"Parent item {ParentId} not found.");
+                    parentResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{ParentId}"); // Adjust the endpoint as necessary
+                    if (parentResponse == null || parentResponse.Data == null)
+                        throw new KeyNotFoundException($"Parent item {ParentId} not found.");
 
 
-                        foreach (var dummyRate in parentResponse.Data.Rates!)
-                        {
-                            if (dummyRate.MinDays <= rentalDays)
-                            {
-                                applicableRate = dummyRate;
-                            }
-
-                        }
-
-                    }
-                    else
-                    {
-                        foreach (var dummyRate in item.Rates!)
-                        {
-                            if (dummyRate.MinDays <= rentalDays)
-                            {
-                                applicableRate = dummyRate;
-                            }
-
-                        }
-                    }
-                    // var rate = await _itemRateRepository.GetApplicableRateAsync(item.Parent?.Id ?? item.Id, rentalDays);
-                    // var rateResponse = await _itemClient.GetFromJsonAsync<ItemRateResponseDto>($"/api/itemrate/getapplicablerate/{(ParentId.HasValue ? ParentId.Value : item.Id)}/{rentalDays}"); // Adjust the endpoint as necessary
-                    var rate = applicableRate;
-                    // var dailyRate = rate?.DailyRate ?? item.Parent?.Price ?? item.Price;
-                    var dailyRate = rate?.DailyRate ?? parentResponse?.Data?.Price ?? item.Price;
-
-                    entity.RentalOrderItems.Add(new Item
-                    {
-                        ItemId = item.Id,
-                        ItemNameSnapshot = item.Name,
-                        DailyRateSnapshot = dailyRate,
-                        Quantity = itemDto.Quantity
-                    });
-
-                    totalAmount += dailyRate * itemDto.Quantity * rentalDays;
-                }
-
-            if (dto.Packages is not null)
-                foreach (var pkgDto in dto.Packages)
-                {
-
-                    // var pkg = await _packageRepository.GetByIdWithItemsAsync(pkgDto.PackageId)
-                    //           ?? throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
-                    var pkg = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
-                    if (pkg == null || pkg.Data == null || pkg.Data.Items == null)
-                        throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
-                    // var rate = await _packageRateRepository.GetApplicableRateAsync(pkg.Id, rentalDays);
-                    var rate = null as PackageRateResponseDto;
-                    foreach (var dummyRate in pkg.Data.Rates!)
+                    foreach (var dummyRate in parentResponse.Data.Rates!)
                     {
                         if (dummyRate.MinDays <= rentalDays)
                         {
-                            rate = dummyRate;
+                            applicableRate = dummyRate;
                         }
 
                     }
-                    var dailyRate = rate?.DailyRate ?? pkg.Data.BasePrice;
 
-                    var rentalPkg = new Package
+                }
+                else
+                {
+                    foreach (var dummyRate in item.Rates!)
                     {
-                        PackageId = pkg.Data.Id,
-                        PackageNameSnapshot = pkg.Data.Name,
-                        DailyRateSnapshot = dailyRate,
-                        Quantity = pkgDto.Quantity
-                    };
-
-                    foreach (var pi in pkg.Data.Items)
-                    {
-
-                        // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
-                        //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                        var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/item/{pi.ItemId}"); // Adjust the endpoint as necessary
-                        if (itemResponse == null || itemResponse.Data == null)
-                            throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                        var item = itemResponse.Data;
-                        var finalItem = item;
-                        var selectedItemId = pkgDto.SelectedItems?
-                            .FirstOrDefault(si => si.PackageItemId == pi.ItemId)?.SelectedItemId;
-
-                        if (item?.Children?.Count != 0)
+                        if (dummyRate.MinDays <= rentalDays)
                         {
-                            if (selectedItemId == null)
-                                throw new InvalidOperationException($"Variant required for item '{item?.Name}' in package '{pkg.Data.Name}'.");
-
-                            var selectedChild = item?.Children?.FirstOrDefault(c => c.Id == selectedItemId)
-                                                ?? throw new InvalidOperationException($"Invalid variant selection for '{item?.Name}'.");
-
-                            finalItem = selectedChild;
+                            applicableRate = dummyRate;
                         }
-                        if (finalItem == null)
-                            throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                        rentalPkg.PackageItems.Add(new PackageItem
-                        {
-                            ItemId = finalItem.Id,
-                            ItemNameSnapshot = finalItem.Name,
-                            QuantityPerPackageSnapshot = pi.Quantity
-                        });
+
+                    }
+                }
+                // var rate = await _itemRateRepository.GetApplicableRateAsync(item.Parent?.Id ?? item.Id, rentalDays);
+                // var rateResponse = await _itemClient.GetFromJsonAsync<ItemRateResponseDto>($"/api/itemrate/getapplicablerate/{(ParentId.HasValue ? ParentId.Value : item.Id)}/{rentalDays}"); // Adjust the endpoint as necessary
+                var rate = applicableRate;
+                // var dailyRate = rate?.DailyRate ?? item.Parent?.Price ?? item.Price;
+                var dailyRate = rate?.DailyRate ?? parentResponse?.Data?.Price ?? item.Price;
+
+                entity.RentalOrderItems.Add(new Item
+                {
+                    ItemId = item.Id,
+                    ItemNameSnapshot = item.Name,
+                    DailyRateSnapshot = dailyRate,
+                    Quantity = itemDto.Quantity
+                });
+
+                totalAmount += dailyRate * itemDto.Quantity * rentalDays;
+            }
+
+        if (dto.Packages is not null)
+            foreach (var pkgDto in dto.Packages)
+            {
+
+                // var pkg = await _packageRepository.GetByIdWithItemsAsync(pkgDto.PackageId)
+                //           ?? throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
+                var pkg = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
+                if (pkg == null || pkg.Data == null || pkg.Data.Items == null)
+                    throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
+                // var rate = await _packageRateRepository.GetApplicableRateAsync(pkg.Id, rentalDays);
+                var rate = null as PackageRateResponseDto;
+                foreach (var dummyRate in pkg.Data.Rates!)
+                {
+                    if (dummyRate.MinDays <= rentalDays)
+                    {
+                        rate = dummyRate;
                     }
 
-                    entity.RentalOrderPackages.Add(rentalPkg);
-                    totalAmount += dailyRate * pkgDto.Quantity * rentalDays;
+                }
+                var dailyRate = rate?.DailyRate ?? pkg.Data.BasePrice;
+
+                var rentalPkg = new Package
+                {
+                    PackageId = pkg.Data.Id,
+                    PackageNameSnapshot = pkg.Data.Name,
+                    DailyRateSnapshot = dailyRate,
+                    Quantity = pkgDto.Quantity
+                };
+
+                foreach (var pi in pkg.Data.Items)
+                {
+
+                    // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
+                    //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
+                    var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/item/{pi.ItemId}"); // Adjust the endpoint as necessary
+                    if (itemResponse == null || itemResponse.Data == null)
+                        throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
+                    var item = itemResponse.Data;
+                    var finalItem = item;
+                    var selectedItemId = pkgDto.SelectedItems?
+                        .FirstOrDefault(si => si.PackageItemId == pi.ItemId)?.SelectedItemId;
+
+                    if (item?.Children?.Count != 0)
+                    {
+                        if (selectedItemId == null)
+                            throw new InvalidOperationException($"Variant required for item '{item?.Name}' in package '{pkg.Data.Name}'.");
+
+                        var selectedChild = item?.Children?.FirstOrDefault(c => c.Id == selectedItemId)
+                                            ?? throw new InvalidOperationException($"Invalid variant selection for '{item?.Name}'.");
+
+                        finalItem = selectedChild;
+                    }
+                    if (finalItem == null)
+                        throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
+                    rentalPkg.PackageItems.Add(new PackageItem
+                    {
+                        ItemId = finalItem.Id,
+                        ItemNameSnapshot = finalItem.Name,
+                        QuantityPerPackageSnapshot = pi.Quantity
+                    });
                 }
 
+                entity.RentalOrderPackages.Add(rentalPkg);
+                totalAmount += dailyRate * pkgDto.Quantity * rentalDays;
+            }
 
-            entity.TotalAmount = totalAmount;
 
-            await _rentalOrderMongoDBRepository.AddAsync(entity);
+        entity.TotalAmount = totalAmount;
+
+        await _rentalOrderMongoDBRepository.AddAsync(entity);
 
 
-            if (entity.PaymentType == OrderPaymentType.Cash)
+        if (entity.PaymentType == OrderPaymentType.Cash)
+        {
+            var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
             {
-                var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
-                {
-                    OrderId = entity.Id,
-                    Amount = entity.TotalAmount,
-                    SessionId = "User-Cash-Payment",
-                    PaymentType = 1, // Cash
-                    Status = 1, // Completed
-                });
-                if (!paymentId.IsSuccessStatusCode)
+                OrderId = entity.Id,
+                Amount = entity.TotalAmount,
+                SessionId = "User-Cash-Payment",
+                PaymentType = 1, // Cash
+                Status = 1, // Completed
+            });
+            if (!paymentId.IsSuccessStatusCode)
             {
                 await _rentalOrderMongoDBRepository.RemoveAsync(entity.Id);
                 throw new InvalidOperationException("Failed to record cash payment.");
             }
 
-                entity.PaymentId = await paymentId.Content.ReadAsStringAsync();
-                // var payment = new Payment
-                // {
-                //     RentalOrderId = entity.Id,
-                //     Amount = entity.TotalAmount,
-                //     PaymentType = PaymentType.Cash,
-                //     PaymentDate = DateTime.UtcNow,
-                //     Status = PaymentStatus.Completed,
-                //     CreatedBy = user,
-                //     CreatedAt = DateTime.UtcNow
-                // };
-                // await _paymentRepository.AddAsync(payment);
-                // await _paymentRepository.SaveChangesAsync();
+            entity.PaymentId = await paymentId.Content.ReadAsStringAsync();
+            // var payment = new Payment
+            // {
+            //     RentalOrderId = entity.Id,
+            //     Amount = entity.TotalAmount,
+            //     PaymentType = PaymentType.Cash,
+            //     PaymentDate = DateTime.UtcNow,
+            //     Status = PaymentStatus.Completed,
+            //     CreatedBy = user,
+            //     CreatedAt = DateTime.UtcNow
+            // };
+            // await _paymentRepository.AddAsync(payment);
+            // await _paymentRepository.SaveChangesAsync();
 
-            }
+        }
 
 
-            return _mapper.Map<RentalOrderResponseDto>(entity);
+        return _mapper.Map<RentalOrderResponseDto>(entity);
 
     }
 
@@ -299,51 +299,51 @@ public class RentalOrderService : IRentalOrderService
     {
         var user = await _userContextService.GetUserAsync();
 
-            var order = await _rentalOrderMongoDBRepository.GetByStripeSessionIdAsync(sessionId)
-                        ?? throw new KeyNotFoundException(OrderNotFound);
+        var order = await _rentalOrderMongoDBRepository.GetByStripeSessionIdAsync(sessionId)
+                    ?? throw new KeyNotFoundException(OrderNotFound);
 
-            // var existingPayments = await _paymentRepository.GetByRentalOrderIdAsync(order.Id);
-            var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
-            var existingPayments = response;
-            if (existingPayments != null)
-                throw new DuplicateNameException("Payment has already been recorded for this order.");
+        // var existingPayments = await _paymentRepository.GetByRentalOrderIdAsync(order.Id);
+        var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
+        var existingPayments = response;
+        if (existingPayments != null)
+            throw new DuplicateNameException("Payment has already been recorded for this order.");
 
-            var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
-            {
-                OrderId = order.Id,
-                Amount = (decimal)(amount ?? 0) / 100,
-                SessionId = sessionId,
-                PaymentType = 0, // stripe
-                Status = 1, // Completed
-            });
-            if (!paymentId.IsSuccessStatusCode)
-                throw new InvalidOperationException("Failed to record stripe payment.");
-            order.PaymentId = await paymentId.Content.ReadAsStringAsync();
+        var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
+        {
+            OrderId = order.Id,
+            Amount = (decimal)(amount ?? 0) / 100,
+            SessionId = sessionId,
+            PaymentType = 0, // stripe
+            Status = 1, // Completed
+        });
+        if (!paymentId.IsSuccessStatusCode)
+            throw new InvalidOperationException("Failed to record stripe payment.");
+        order.PaymentId = await paymentId.Content.ReadAsStringAsync();
 
 
 
-            if (order.Status != RentalStatus.PendingPayment)
-                throw new InvalidOperationException("Only pending payment orders can be approved.");
+        if (order.Status != RentalStatus.PendingPayment)
+            throw new InvalidOperationException("Only pending payment orders can be approved.");
 
-            order.Status = order.Channel switch
-            {
-                OrderChannel.POS => RentalStatus.Rented,
-                OrderChannel.Manual => RentalStatus.Booked,
-                _ => RentalStatus.Pending
-            };
-            order.UpdatedById = user.Id;
-            order.UpdatedAt = DateTime.UtcNow;
+        order.Status = order.Channel switch
+        {
+            OrderChannel.POS => RentalStatus.Rented,
+            OrderChannel.Manual => RentalStatus.Booked,
+            _ => RentalStatus.Pending
+        };
+        order.UpdatedById = user.Id;
+        order.UpdatedAt = DateTime.UtcNow;
 
-            if (order.Status is RentalStatus.Rented or RentalStatus.Booked)
-            {
-                order.ApprovedById = user.Id;
-                order.ApprovedAt = DateTime.UtcNow;
-            }
+        if (order.Status is RentalStatus.Rented or RentalStatus.Booked)
+        {
+            order.ApprovedById = user.Id;
+            order.ApprovedAt = DateTime.UtcNow;
+        }
 
-            await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-            // await _paymentRepository.SaveChangesAsync();
+        await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
+        // await _paymentRepository.SaveChangesAsync();
 
-            return _mapper.Map<RentalOrderResponseDto>(order);
+        return _mapper.Map<RentalOrderResponseDto>(order);
 
     }
 
@@ -351,20 +351,20 @@ public class RentalOrderService : IRentalOrderService
     {
         var user = await _userContextService.GetUserAsync();
 
-            var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
-                        ?? throw new KeyNotFoundException(OrderNotFound);
+        var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
+                    ?? throw new KeyNotFoundException(OrderNotFound);
 
-            if (order.Status != RentalStatus.Pending)
-                throw new InvalidOperationException("Only pending orders can be approved.");
+        if (order.Status != RentalStatus.Pending)
+            throw new InvalidOperationException("Only pending orders can be approved.");
 
-            order.Status = RentalStatus.Booked;
-            order.ApprovedById = user.Id;
-            order.ApprovedAt = DateTime.UtcNow;
-            order.UpdatedById = user.Id;
-            order.UpdatedAt = DateTime.UtcNow;
+        order.Status = RentalStatus.Booked;
+        order.ApprovedById = user.Id;
+        order.ApprovedAt = DateTime.UtcNow;
+        order.UpdatedById = user.Id;
+        order.UpdatedAt = DateTime.UtcNow;
 
-            await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-            return _mapper.Map<RentalOrderResponseDto>(order);
+        await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
+        return _mapper.Map<RentalOrderResponseDto>(order);
 
     }
 
@@ -372,109 +372,109 @@ public class RentalOrderService : IRentalOrderService
     {
         var user = await _userContextService.GetUserAsync();
 
-            var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
-                        ?? throw new KeyNotFoundException(OrderNotFound);
+        var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
+                    ?? throw new KeyNotFoundException(OrderNotFound);
 
-            if (order.Status != RentalStatus.Pending)
-                throw new InvalidOperationException("Only pending orders can be approved.");
+        if (order.Status != RentalStatus.Pending)
+            throw new InvalidOperationException("Only pending orders can be approved.");
 
-            order.Status = RentalStatus.Cancelled;
-            order.ApprovedById = user.Id;
-            order.ApprovedAt = DateTime.UtcNow;
-            order.UpdatedById = user.Id;
-            order.UpdatedAt = DateTime.UtcNow;
+        order.Status = RentalStatus.Cancelled;
+        order.ApprovedById = user.Id;
+        order.ApprovedAt = DateTime.UtcNow;
+        order.UpdatedById = user.Id;
+        order.UpdatedAt = DateTime.UtcNow;
 
-            await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
+        await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
 
-            return _mapper.Map<RentalOrderResponseDto>(order);
+        return _mapper.Map<RentalOrderResponseDto>(order);
 
     }
 
     public async Task<RentalOrderResponseDto> MarkAsRentedAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
-            var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
-                        ?? throw new KeyNotFoundException(OrderNotFound);
+        var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
+                    ?? throw new KeyNotFoundException(OrderNotFound);
 
-            if (order.Status != RentalStatus.Booked)
-                throw new InvalidOperationException("Only booked orders can be marked as rented.");
+        if (order.Status != RentalStatus.Booked)
+            throw new InvalidOperationException("Only booked orders can be marked as rented.");
 
-            order.Status = RentalStatus.Rented;
-            order.UpdatedById = user.Id;
-            order.UpdatedAt = DateTime.UtcNow;
+        order.Status = RentalStatus.Rented;
+        order.UpdatedById = user.Id;
+        order.UpdatedAt = DateTime.UtcNow;
 
-            await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-            return _mapper.Map<RentalOrderResponseDto>(order);
+        await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
+        return _mapper.Map<RentalOrderResponseDto>(order);
 
     }
 
     public async Task<RentalOrderResponseDto> ReturnAsync(string id, ReturnRentalOrderRequestDto dto)
     {
         var user = await _userContextService.GetUserAsync();
-            var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
-                        ?? throw new KeyNotFoundException($"Rental order {id} not found.");
+        var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
+                    ?? throw new KeyNotFoundException($"Rental order {id} not found.");
 
-            if (order.Status != RentalStatus.Rented)
-                throw new InvalidOperationException("Only rented orders can be returned.");
+        if (order.Status != RentalStatus.Rented)
+            throw new InvalidOperationException("Only rented orders can be returned.");
 
-            ValidateReturnedQuantitiesAsync(order, dto);
+        ValidateReturnedQuantitiesAsync(order, dto);
 
-            if (dto.Items != null)
-                foreach (var itemCondition in dto.Items)
+        if (dto.Items != null)
+            foreach (var itemCondition in dto.Items)
+            {
+                var orderItem = order.RentalOrderItems
+                                    .FirstOrDefault(x => x.ItemId == itemCondition.RentalOrderItemId)
+                                ?? throw new KeyNotFoundException($"RentalOrderItem {itemCondition.RentalOrderItemId} not found.");
+
+                orderItem.SetReturnConditions(
+                    itemCondition.GoodQty,
+                    itemCondition.RepairQty,
+                    itemCondition.DamagedQty,
+                    itemCondition.LostQty
+                );
+
+                await HandleMaintenanceAsync(orderItem.ItemId, order.Id, itemCondition, user.Id, order.StoreId);
+            }
+
+        if (dto.Packages != null)
+            foreach (var pkgDto in dto.Packages)
+            {
+                var orderPackage = order.RentalOrderPackages
+                                       .FirstOrDefault(x => x.PackageId == pkgDto.RentalOrderPackageId)
+                                   ?? throw new KeyNotFoundException($"RentalOrderPackage {pkgDto.RentalOrderPackageId} not found.");
+
+                foreach (var pkgItemDto in pkgDto.PackageItems)
                 {
-                    var orderItem = order.RentalOrderItems
-                                        .FirstOrDefault(x => x.ItemId == itemCondition.RentalOrderItemId)
-                                    ?? throw new KeyNotFoundException($"RentalOrderItem {itemCondition.RentalOrderItemId} not found.");
+                    var orderPkgItem = orderPackage.PackageItems
+                                           .FirstOrDefault(x => x.ItemId == pkgItemDto.RentalOrderPackageItemId)
+                                       ?? throw new KeyNotFoundException($"RentalOrderPackageItem {pkgItemDto.RentalOrderPackageItemId} not found.");
 
-                    orderItem.SetReturnConditions(
-                        itemCondition.GoodQty,
-                        itemCondition.RepairQty,
-                        itemCondition.DamagedQty,
-                        itemCondition.LostQty
-                    );
+                    orderPkgItem.GoodQty = pkgItemDto.GoodQty;
+                    orderPkgItem.RepairQty = pkgItemDto.RepairQty;
+                    orderPkgItem.DamagedQty = pkgItemDto.DamagedQty;
+                    orderPkgItem.LostQty = pkgItemDto.LostQty;
 
-                    await HandleMaintenanceAsync(orderItem.ItemId, order.Id, itemCondition, user.Id, order.StoreId);
+                    await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id, order.StoreId);
                 }
+            }
 
-            if (dto.Packages != null)
-                foreach (var pkgDto in dto.Packages)
-                {
-                    var orderPackage = order.RentalOrderPackages
-                                           .FirstOrDefault(x => x.PackageId == pkgDto.RentalOrderPackageId)
-                                       ?? throw new KeyNotFoundException($"RentalOrderPackage {pkgDto.RentalOrderPackageId} not found.");
+        order.ItemsGoodCount = order.RentalOrderItems.Sum(i => i.GoodQty)
+                               + order.RentalOrderPackages.SelectMany(p => p.PackageItems).Sum(i => i.GoodQty);
 
-                    foreach (var pkgItemDto in pkgDto.PackageItems)
-                    {
-                        var orderPkgItem = orderPackage.PackageItems
-                                               .FirstOrDefault(x => x.ItemId == pkgItemDto.RentalOrderPackageItemId)
-                                           ?? throw new KeyNotFoundException($"RentalOrderPackageItem {pkgItemDto.RentalOrderPackageItemId} not found.");
+        order.ItemsIssueCount = order.RentalOrderItems.Count(i => i.HasIssues)
+                                + order.RentalOrderPackages.SelectMany(p => p.PackageItems).Count(i => i.HasIssues);
 
-                        orderPkgItem.GoodQty = pkgItemDto.GoodQty;
-                        orderPkgItem.RepairQty = pkgItemDto.RepairQty;
-                        orderPkgItem.DamagedQty = pkgItemDto.DamagedQty;
-                        orderPkgItem.LostQty = pkgItemDto.LostQty;
+        order.HasIssues = order.ItemsIssueCount > 0;
+        order.Status = RentalStatus.Returned;
+        order.ReturnedAt = DateTime.UtcNow;
+        order.ReturnedById = user.Id;
+        order.ReturnRemarks = dto.Remarks;
+        order.UpdatedById = user.Id;
+        order.UpdatedAt = DateTime.UtcNow;
 
-                        await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id, order.StoreId);
-                    }
-                }
+        await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
 
-            order.ItemsGoodCount = order.RentalOrderItems.Sum(i => i.GoodQty)
-                                   + order.RentalOrderPackages.SelectMany(p => p.PackageItems).Sum(i => i.GoodQty);
-
-            order.ItemsIssueCount = order.RentalOrderItems.Count(i => i.HasIssues)
-                                    + order.RentalOrderPackages.SelectMany(p => p.PackageItems).Count(i => i.HasIssues);
-
-            order.HasIssues = order.ItemsIssueCount > 0;
-            order.Status = RentalStatus.Returned;
-            order.ReturnedAt = DateTime.UtcNow;
-            order.ReturnedById = user.Id;
-            order.ReturnRemarks = dto.Remarks;
-            order.UpdatedById = user.Id;
-            order.UpdatedAt = DateTime.UtcNow;
-
-            await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-
-            return _mapper.Map<RentalOrderResponseDto>(order);
+        return _mapper.Map<RentalOrderResponseDto>(order);
 
     }
 
