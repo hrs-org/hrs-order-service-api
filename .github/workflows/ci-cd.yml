@@ -1,12 +1,11 @@
-name: CI/CD Pipeline
+name: HRS Order Service CI/CD
 
 on:
     pull_request:
         branches: [develop]
     push:
-        branches: [develop]
-    release:
-        types: [published]
+        tags:
+            - "v*.*.*"
 
 permissions:
     contents: read
@@ -14,6 +13,7 @@ permissions:
     security-events: write
     pull-requests: write
     checks: write
+    packages: read
 
 env:
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
@@ -23,138 +23,6 @@ jobs:
     build:
         name: Build
         runs-on: ubuntu-latest
-        if: github.event_name != 'release'
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  global-json-file: global.json
-
-            - name: Cache NuGet packages
-              uses: actions/cache@v4
-              with:
-                  path: ~/.nuget/packages
-                  key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-                  restore-keys: |
-                      ${{ runner.os }}-nuget-
-
-            - name: Restore dependencies
-              run: dotnet restore HikingRentalStore.sln
-
-            - name: Build solution
-              run: dotnet build HikingRentalStore.sln --configuration Release --no-restore
-
-            - name: Upload build artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: build-artifacts
-                  path: |
-                      **/bin/Release/**
-                      **/obj/**
-                      **/*.csproj
-                      **/*.sln
-                  retention-days: 1
-
-    test:
-        name: Run Tests
-        runs-on: ubuntu-latest
-        needs: build
-        if: github.event_name != 'release'
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  global-json-file: global.json
-
-            - name: Cache NuGet packages
-              uses: actions/cache@v4
-              with:
-                  path: ~/.nuget/packages
-                  key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-                  restore-keys: |
-                      ${{ runner.os }}-nuget-
-
-            - name: Restore dependencies
-              run: dotnet restore HikingRentalStore.sln
-
-            - name: Build solution
-              run: dotnet build HikingRentalStore.sln --configuration Release --no-restore
-
-            - name: Create coverage directory
-              run: mkdir -p ./coverage
-
-            - name: Create coverage settings
-              run: |
-                  cat > ./coverage.runsettings << 'EOF'
-                  <?xml version="1.0" encoding="utf-8"?>
-                  <RunSettings>
-                    <DataCollectionRunSettings>
-                      <DataCollectors>
-                        <DataCollector friendlyName="Code Coverage" uri="datacollector://Microsoft/CodeCoverage/2.0" assemblyQualifiedName="Microsoft.VisualStudio.Coverage.DynamicCoverageDataCollector, Microsoft.VisualStudio.TraceCollector, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-                          <Configuration>
-                            <CodeCoverage>
-                              <ModulePaths>
-                                <Exclude>
-                                  <ModulePath>.*HRS\.Migrations.*</ModulePath>
-                                </Exclude>
-                              </ModulePaths>
-                              <Source>
-                                <Exclude>
-                                  <Source>.*Program\.cs</Source>
-                                  <Source>.*/HRS\.API/Mappings/.*</Source>
-                                </Exclude>
-                              </Source>
-                            </CodeCoverage>
-                          </Configuration>
-                        </DataCollector>
-                      </DataCollectors>
-                    </DataCollectionRunSettings>
-                  </RunSettings>
-                  EOF
-
-            - name: Install dotnet-coverage tool
-              run: dotnet tool install --global dotnet-coverage
-
-            - name: Run tests with coverage
-              run: |
-                  # Generate code coverage using dotnet-coverage (standard XML format)
-                  # Exclude HRS.Migrations project from testing and coverage
-                  dotnet-coverage collect "dotnet test HikingRentalStore.sln --configuration Release --no-build --verbosity normal" \
-                    -f xml -o "./coverage/coverage.xml" \
-                    --settings ./coverage.runsettings
-                    
-                  # Generate test results for SonarCloud
-                  dotnet test HikingRentalStore.sln --configuration Release --no-build \
-                    --logger "trx;LogFileName=TestResults.trx" \
-                    --results-directory ./coverage
-                    
-                  # Verify coverage file was created
-                  ls -la ./coverage/
-                  echo "Coverage file size:"
-                  du -h ./coverage/coverage.xml || echo "Coverage file not found"
-
-            - name: Upload test results
-              uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                  name: test-results
-                  path: ./coverage/
-                  retention-days: 1
-
-    code-quality:
-        name: Code Quality Analysis
-        runs-on: ubuntu-latest
-        needs: [build, test]
-        if: github.event_name != 'release'
-
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -164,90 +32,93 @@ jobs:
             - name: Setup .NET
               uses: actions/setup-dotnet@v4
               with:
-                  global-json-file: global.json
+                  dotnet-version: 8.0.x
 
-            - name: Install SonarCloud scanner
-              run: dotnet tool install --global dotnet-sonarscanner
-
-            - name: Download test results
-              uses: actions/download-artifact@v4
-              with:
-                  name: test-results
-                  path: ./coverage
-
-            - name: Begin SonarCloud analysis
-              env:
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-                  GITHUB_EVENT_NAME: ${{ github.event_name }}
-                  PR_NUMBER: ${{ github.event.number }}
-                  PR_HEAD_REF: ${{ github.head_ref }}
-                  PR_BASE_REF: ${{ github.base_ref }}
-                  BRANCH_NAME: ${{ github.ref_name }}
+            - name: Authenticate with GitHub Packages
               run: |
-                  # Get absolute path to coverage file
-                  COVERAGE_PATH=$(readlink -f ./coverage/coverage.xml)
-                  echo "Using coverage file: $COVERAGE_PATH"
+                  # Remove existing source if present, then add it
+                  dotnet nuget remove source github 2>/dev/null || true
+                  dotnet nuget add source --username ${{ github.actor}} \
+                    --password ${{ secrets.PACKAGES_READ_TOKEN }} \
+                    --store-password-in-clear-text \
+                    --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
-                  # Set up SonarCloud parameters based on event type
-                  SONAR_PARAMS=""
-                  if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-                    echo "Running SonarCloud analysis for pull request"
-                    SONAR_PARAMS="/d:sonar.pullrequest.key=$PR_NUMBER /d:sonar.pullrequest.branch=$PR_HEAD_REF /d:sonar.pullrequest.base=$PR_BASE_REF"
-                  else
-                    echo "Running SonarCloud analysis for branch: $BRANCH_NAME"
-                    SONAR_PARAMS="/d:sonar.branch.name=$BRANCH_NAME"
-                  fi
-
-                  dotnet-sonarscanner begin \
-                    /k:"hrs-org_hiking-rental-store-api" \
-                    /o:"hrs-org" \
-                    /d:sonar.token="$SONAR_TOKEN" \
-                    /d:sonar.host.url="https://sonarcloud.io" \
-                    /d:sonar.cs.vstest.reportsPaths="./coverage/TestResults.trx" \
-                    /d:sonar.cs.vscoveragexml.reportsPaths="$COVERAGE_PATH" \
-                    /d:sonar.coverage.exclusions="**/HRS.Test/**,**/*Test*.cs,**/bin/**,**/obj/**,**/Migrations/**,**/HRS.Migrations/**,**/Program.cs,**/Mappings/**" \
-                    /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**,**/HRS.Migrations/**" \
-                    /d:sonar.test.exclusions="**/bin/**,**/obj/**,**/HRS.Migrations/**" \
-                    /d:sonar.scm.disabled=true \
-                    /d:sonar.qualitygate.wait=false \
-                    /d:sonar.verbose=true \
-                    $SONAR_PARAMS
-
-            - name: Restore dependencies (for SonarQube analysis)
+            - name: Restore dependencies
               run: dotnet restore HikingRentalStore.sln
 
-            - name: Build for SonarQube analysis
+            - name: Build project
               run: dotnet build HikingRentalStore.sln --configuration Release --no-restore
 
-            - name: End SonarCloud analysis
-              env:
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-              run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+            - name: Run tests
+              run: dotnet test HRS.Test/HRS.Test.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+            - name: Upload test results
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: test-results
+                  path: "**/test-results.trx"
+                  retention-days: 7
+
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        needs: build
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: 8.0.x
+
+            - name: Authenticate with GitHub Packages
+              run: |
+                  # Remove existing source if present, then add it
+                  dotnet nuget remove source github 2>/dev/null || true
+                  dotnet nuget add source --username ${{ github.actor }} \
+                    --password ${{ secrets.PACKAGES_READ_TOKEN }} \
+                    --store-password-in-clear-text \
+                    --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
+            - name: Restore dependencies
+              run: dotnet restore HikingRentalStore.sln
+
+            - name: Check code formatting
+              run: dotnet format HikingRentalStore.sln --verify-no-changes --verbosity diagnostic
 
     security-scan:
         name: Security Scan
         runs-on: ubuntu-latest
         needs: build
-        if: github.event_name != 'release'
-
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
             - name: Setup .NET
               uses: actions/setup-dotnet@v4
               with:
-                  global-json-file: global.json
+                  dotnet-version: 8.0.x
 
-            - name: Download build artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: build-artifacts
-
-            - name: Run security audit
+            - name: Authenticate with GitHub Packages
               run: |
-                  dotnet list package --vulnerable --include-transitive > security-audit.txt 2>&1 || true
-                  echo "Security audit completed. Check security-audit.txt for results."
+                  # Remove existing source if present, then add it
+                  dotnet nuget remove source github 2>/dev/null || true
+                  dotnet nuget add source --username ${{ github.actor }} \
+                    --password ${{ secrets.PACKAGES_READ_TOKEN }} \
+                    --store-password-in-clear-text \
+                    --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
+            - name: Restore dependencies
+              run: dotnet restore HikingRentalStore.sln
+
+            - name: Security audit
+              run: dotnet list HikingRentalStore.sln package --vulnerable --include-transitive > security-audit.txt 2>&1 || true
 
             - name: Upload security scan results
               uses: actions/upload-artifact@v4
@@ -255,117 +126,164 @@ jobs:
               with:
                   name: security-scan-results
                   path: security-audit.txt
-                  retention-days: 30
-
-    lint:
-        name: Code Formatting & Style
-        runs-on: ubuntu-latest
-        needs: build
-        if: github.event_name != 'release'
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  global-json-file: global.json
-
-            - name: Download build artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: build-artifacts
-
-            - name: Verify code formatting
-              run: dotnet format HikingRentalStore.sln --verify-no-changes --verbosity diagnostic
+                  retention-days: 7
 
     docker-build:
-        name: Build & Push Docker Image
+        name: Build & Push Docker Image to ACR
         runs-on: ubuntu-latest
-        needs: [build, test, code-quality, security-scan, lint]
-        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        environment: staging
+        needs: [build, lint, security-scan]
+        if: github.event_name == 'push'
+        environment: uat
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+            image-tag: ${{ steps.version.outputs.image-tag }}
 
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
-
-            - name: Download build artifacts
-              uses: actions/download-artifact@v4
               with:
-                  name: build-artifacts
+                  fetch-depth: 0
+
+            - name: Install Nerdbank.GitVersioning
+              run: dotnet tool install --global nbgv
+
+            - name: Determine version
+              id: version
+              run: |
+                  if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+                    # Tagged release: v1.2.3 → 1.2.3
+                    VERSION=${GITHUB_REF#refs/tags/v}
+                    IMAGE_TAG="$VERSION"
+                    echo "📦 Building RELEASE version: $VERSION"
+                  else
+                    # Development build: use valid SemVer with prerelease tag
+                    SHORT_SHA=$(git rev-parse --short HEAD)
+                    # Get version from nbgv, but use valid SemVer format: 1.0.1-dev.abc123
+                    BASE_VERSION=$(nbgv get-version -v Version | cut -d'.' -f1-3)
+                    VERSION="${BASE_VERSION}-dev.${SHORT_SHA}"
+                    IMAGE_TAG="dev-${SHORT_SHA}"
+                    echo "📦 Building DEV version: $VERSION (image tag: $IMAGE_TAG)"
+                  fi
+
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
             - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+              uses: docker/setup-buildx-action@v3
 
-            - name: Log in to Docker Hub
-              uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+            - name: Log in to Azure
+              uses: azure/login@v1
               with:
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+            - name: Log in to Azure Container Registry
+              run: |
+                  az acr login --name ${{ secrets.ACR_NAME }}
 
             - name: Build and push Docker image
-              uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
-              env:
-                  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+              uses: docker/build-push-action@v5
               with:
                   context: .
+                  file: ./Dockerfile
                   push: true
+                  build-args: |
+                      VERSION=${{ steps.version.outputs.version }}
+                      GITHUB_TOKEN=${{ secrets.PACKAGES_READ_TOKEN }}
                   tags: |
-                      ${{ env.DOCKER_USERNAME }}/hrs-api:uat-latest
-                      ${{ env.DOCKER_USERNAME }}/hrs-api:${{ github.sha }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
+                      ${{ secrets.ACR_NAME }}.azurecr.io/hrs-order-service:${{ steps.version.outputs.image-tag }}
+                      ${{ secrets.ACR_NAME }}.azurecr.io/hrs-order-service:latest
+                      ${{ secrets.ACR_NAME }}.azurecr.io/hrs-order-service:${{ github.sha }}
+                  labels: |
+                      org.opencontainers.image.version=${{ steps.version.outputs.version }}
+                      org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+                      org.opencontainers.image.revision=${{ github.sha }}
+                      org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
+            - name: Create deployment info
+              run: |
+                  mkdir -p artifacts
+                  cat > artifacts/deployment-info.txt <<EOF
+                  VERSION=${{ steps.version.outputs.version }}
+                  IMAGE_TAG=${{ steps.version.outputs.image-tag }}
+                  COMMIT_SHA=${{ github.sha }}
+                  BRANCH=${{ github.ref_name }}
+                  BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+                  TRIGGERED_BY=${{ github.actor }}
+                  EOF
+
+                  echo "📄 Deployment Info:"
+                  cat artifacts/deployment-info.txt
+
+            - name: Upload deployment info
+              uses: actions/upload-artifact@v4
+              with:
+                  name: deployment-info
+                  path: artifacts/deployment-info.txt
+                  retention-days: 30
 
     dast:
         name: DAST Security Scan
         runs-on: ubuntu-latest
         needs: docker-build
-        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        environment: staging
-
+        if: github.event_name == 'push'
+        environment: uat
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Log in to Azure
+              uses: azure/login@v1
+              with:
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
 
             - name: Pull and run Docker image
               env:
-                  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-                  CONNECTION_STRING: ${{ secrets.CONNECTION_STRING }}
-                  JWT_KEY: ${{ secrets.JWT_KEY }}
-                  JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
-                  JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+                  IMAGE_TAG: ${{ needs.docker-build.outputs.image-tag }}
               run: |
-                  docker pull $DOCKER_USERNAME/hrs-api:${{ github.sha }}
-                  docker run -d -p 5000:8080 --name hrs-api \
-                    -e ASPNETCORE_ENVIRONMENT=Staging \
-                    -e ConnectionStrings__DefaultConnection="$CONNECTION_STRING" \
-                    -e Jwt__Key="$JWT_KEY" \
-                    -e Jwt__Issuer="$JWT_ISSUER" \
-                    -e Jwt__Audience="$JWT_AUDIENCE" \
-                    $DOCKER_USERNAME/hrs-api:${{ github.sha }}
+                  az acr login --name ${{ secrets.ACR_NAME }}
 
-                  # Wait for application to start and verify it's healthy
+                  echo "Image tag from docker-build: ${IMAGE_TAG}"
+
+                  if [ -z "$IMAGE_TAG" ]; then
+                    echo "ERROR: IMAGE_TAG is empty!"
+                    echo "Using 'latest' as fallback"
+                    IMAGE_TAG="latest"
+                  fi
+
+                  echo "Pulling image: ${{ secrets.ACR_NAME }}.azurecr.io/hrs-order-service:${IMAGE_TAG}"
+                  docker pull ${{ secrets.ACR_NAME }}.azurecr.io/hrs-order-service:${IMAGE_TAG}
+
+                  echo "Starting container..."
+                  docker run -d -p 5000:80 --name hrs-order-service \
+                    -e ASPNETCORE_ENVIRONMENT=Production \
+                    -e ConnectionStrings__DefaultConnectionMongoDB="mongodb://localhost:27017/hrsdb-order?authSource=admin" \
+                    -e MongoDB__DatabaseName="hrsdb-order" \
+                    -e Jwt__Key="${{ secrets.JWT_SECRET_KEY }}" \
+                    -e Jwt__Issuer="HRSApp" \
+                    -e Jwt__Audience="HRSUsers" \
+                    -e ItemMaintenanceService="http://localhost:5001/" \
+                    -e PaymentService="http://localhost:5010/" \
+                    -e ItemService="http://localhost:5001/" \
+                    ${{ secrets.ACR_NAME }}.azurecr.io/hrs-order-service:${IMAGE_TAG}
+
                   echo "Waiting for application to start..."
-                  sleep 30
+                  sleep 20
 
-                  echo "Checking container status:"
+                  echo "Container status:"
                   docker ps -a
 
-                  echo "Checking container logs:"
-                  docker logs hrs-api
+                  echo "Container logs:"
+                  docker logs hrs-order-service
 
-                  echo "Testing application endpoints:"
-                  curl -f http://localhost:5000/health || echo "Health endpoint not available (Wrong)"
-                  curl -I http://localhost:5000/api/auth || echo "Auth API not available (Correct)"
-                  curl -I http://localhost:5000/api/users || echo "Users API not available (Correct)"
-                  curl -I http://localhost:5000/swagger || echo "Swagger not available (Correct)"
+                  echo "Testing health endpoint:"
+                  curl -f http://localhost:5000/health || echo "Health endpoint not available"
 
             - name: OWASP ZAP Baseline Scan
-              uses: zaproxy/action-baseline@1e1871e84428617b969d4a1f981a8255630d54b0 # v0.10.0
+              uses: zaproxy/action-baseline@v0.10.0
               with:
-                  target: "http://localhost:5000/api"
+                  target: "http://localhost:5000/health"
                   cmd_options: "-a -j -l WARN -T 10 -I"
               continue-on-error: true
 
@@ -379,57 +297,10 @@ jobs:
                       report_json.json
                       report_md.md
                       report_xml.xml
-                  retention-days: 30
+                  retention-days: 7
 
             - name: Stop application
               if: always()
-              run: docker stop hrs-api
-
-    production-build:
-        name: Production Docker Release
-        runs-on: ubuntu-latest
-        if: github.event_name == 'release'
-        environment: production
-        env:
-            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Log in to Docker Hub
-              uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
-              with:
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
-
-            - name: Extract version from tag
-              id: version
-              run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-            - name: Get commit SHA for release
-              id: commit
-              run: echo "SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
-            - name: Re-tag existing image for production
               run: |
-                  # Pull the exact image that was built from this commit SHA
-                  docker pull ${{ env.DOCKER_USERNAME }}/hrs-api:${{ steps.commit.outputs.SHA }}
-
-                  # Re-tag it for production
-                  docker tag ${{ env.DOCKER_USERNAME }}/hrs-api:${{ steps.commit.outputs.SHA }} ${{ env.DOCKER_USERNAME }}/hrs-api:latest
-                  docker tag ${{ env.DOCKER_USERNAME }}/hrs-api:${{ steps.commit.outputs.SHA }} ${{ env.DOCKER_USERNAME }}/hrs-api:${{ steps.version.outputs.VERSION }}
-
-                  # Push the new tags
-                  docker push ${{ env.DOCKER_USERNAME }}/hrs-api:latest
-                  docker push ${{ env.DOCKER_USERNAME }}/hrs-api:${{ steps.version.outputs.VERSION }}
-
-            - name: Production release summary
-              run: |
-                  echo "🚀 Production release completed!"
-                  echo "📦 Source image: hrs-api:${{ steps.commit.outputs.SHA }}"
-                  echo "🏷️ New tags created:"
-                  echo "   - hrs-api:latest"
-                  echo "   - hrs-api:${{ steps.version.outputs.VERSION }}"
-                  echo "🔧 Environment: production"
-                  echo "🗄️ Uses production environment secrets for runtime configuration"
+                  docker stop hrs-order-service || true
+                  docker rm hrs-order-service || true

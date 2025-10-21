@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: orders
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: mongodb-secret
+    namespace: orders
+type: Opaque
+stringData:
+    mongodb-root-username: admin
+    mongodb-root-password: 38EBD2537A6D4194958B4E83fd1D6!
+    mongodb-connection-string: mongodb://admin:38EBD2537A6D4194958B4E83fd1D6!@mongodb.orders.svc.cluster.local:27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: mongodb
+    namespace: orders
+    labels:
+        app: mongodb
+spec:
+    ports:
+        - port: 27017
+          targetPort: 27017
+          name: mongodb
+    clusterIP: None
+    selector:
+        app: mongodb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: mongodb
+    namespace: orders
+spec:
+    serviceName: mongodb
+    replicas: 1
+    selector:
+        matchLabels:
+            app: mongodb
+    template:
+        metadata:
+            labels:
+                app: mongodb
+        spec:
+            containers:
+                - name: mongodb
+                  image: mongo:7.0
+                  ports:
+                      - containerPort: 27017
+                        name: mongodb
+                  env:
+                      - name: MONGO_INITDB_ROOT_USERNAME
+                        valueFrom:
+                            secretKeyRef:
+                                name: mongodb-secret
+                                key: mongodb-root-username
+                      - name: MONGO_INITDB_ROOT_PASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: mongodb-secret
+                                key: mongodb-root-password
+                  volumeMounts:
+                      - name: mongodb-data
+                        mountPath: /data/db
+                  resources:
+                      requests:
+                          memory: "256Mi"
+                          cpu: "250m"
+                      limits:
+                          memory: "512Mi"
+                          cpu: "500m"
+                  livenessProbe:
+                      exec:
+                          command:
+                              - mongosh
+                              - --eval
+                              - "db.adminCommand('ping')"
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                  readinessProbe:
+                      exec:
+                          command:
+                              - mongosh
+                              - --eval
+                              - "db.adminCommand('ping')"
+                      initialDelaySeconds: 15
+                      periodSeconds: 5
+                      timeoutSeconds: 3
+    volumeClaimTemplates:
+        - metadata:
+              name: mongodb-data
+          spec:
+              accessModes: ["ReadWriteOnce"]
+              storageClassName: managed-csi
+              resources:
+                  requests:
+                      storage: 5Gi
