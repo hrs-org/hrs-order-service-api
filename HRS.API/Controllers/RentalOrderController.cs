@@ -35,23 +35,22 @@ public class RentalOrderController : ControllerBase
         return Ok(ApiResponse<List<RentalOrderListDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("bookings/{storeid}")]
+    [HttpGet("bookings")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings(int storeid)
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings()
     {
         var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled, RentalStatus.PendingPayment };
-
-        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses, storeid);
+        var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
-    [HttpGet("rents/{storeid}")]
+    [HttpGet("rents")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents(int storeid)
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents()
     {
         var rentStatuses = new[] { RentalStatus.Rented };
 
-        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses, storeid);
+        var result = await _rentalOrderService.GetByStatusesAsync(rentStatuses);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
 
@@ -124,6 +123,22 @@ public class RentalOrderController : ControllerBase
             return Ok(ApiResponse<string>.OkResponse("Stripe Session ID assigned successfully"));
         }
 
+    }
+
+    [HttpGet("/api/orders/get-for-db")]
+    [Authorize(Roles = "Employee,Manager,Admin")]
+    public async Task<ActionResult<IEnumerable<RentalOrderMongoDB>>> GetForDb()
+    {
+        var result = await _rentalOrderService.GetForDb();
+        return Ok(ApiResponse<IEnumerable<RentalOrderMongoDB>>.OkResponse(result));
+    }
+
+    [HttpPost("/api/orders/create-db")]
+    [Authorize(Roles = "Employee,Manager,Admin")]
+    public async Task<ActionResult<RentalOrderMongoDB>> CreateDB([FromBody] CreateRentalOrderRequestDto dto)
+    {
+        var result = await _rentalOrderService.CreateDB(dto);
+        return Ok(ApiResponse<RentalOrderMongoDB>.OkResponse(result, "Order created successfully"));
     }
 
 

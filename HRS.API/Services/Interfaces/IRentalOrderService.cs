@@ -8,7 +8,7 @@ public interface IRentalOrderService
 {
     Task<RentalOrderResponseDto> GetAsync(string id);
     Task<IEnumerable<RentalOrderListDto>> GetAllAsync();
-    Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses, int storeId);
+    Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses);
     Task<RentalOrderResponseDto> CreateAsync(CreateRentalOrderRequestDto dto);
     Task<RentalOrderResponseDto> ApproveAsync(string id);
     Task<RentalOrderResponseDto> CancelAsync(string id);
@@ -17,5 +17,8 @@ public interface IRentalOrderService
     Task<RentalOrderResponseDto> MarkAsRentedAsync(string id);
     Task<RentalOrderResponseDto> ReturnAsync(string id, ReturnRentalOrderRequestDto dto);
     Task<RentalOrderResponseDto> CloseAsync(string id);
+
+    Task<IEnumerable<RentalOrderMongoDB>> GetForDb();
+    Task<RentalOrderMongoDB> CreateDB(CreateRentalOrderRequestDto dto);
 
 }
