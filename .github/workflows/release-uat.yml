@@ -22,8 +22,8 @@ permissions:
     id-token: write
 
 env:
-    AZURE_RESOURCE_GROUP: hrs-cluster-uat-rg
-    AKS_CLUSTER_NAME: hrs-cluster-uat
+    AZURE_RESOURCE_GROUP: rg-hrsm-uat
+    AKS_CLUSTER_NAME: hrsm-uat-aks
     NAMESPACE: orders
     DEPLOYMENT_NAME: hrs-order-service
     SERVICE_NAME: hrs-order-service
