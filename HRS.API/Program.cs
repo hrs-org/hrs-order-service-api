@@ -22,9 +22,6 @@ builder.Services.AddScoped<IUserContextService, UserContextService>();
 builder.Services.AddScoped<IRentalOrderService, RentalOrderService>();
 builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
-
-builder.Services.AddScoped(typeof(ICrudRepository<>), typeof(CrudRepository<>));
-builder.Services.AddScoped<IRentalOrderRepository, RentalOrderRepository>();
 builder.Services.AddScoped<IAppConfiguration, AppConfiguration>();
 builder.Services.AddHttpContextAccessor();
 
@@ -104,14 +101,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnectionMySql");
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString,
-        Microsoft.EntityFrameworkCore.ServerVersion.AutoDetect(connectionString),
-        b => b.MigrationsAssembly("HRS.Migrations")));
-
 builder.Services.AddAutoMapper(cfg => { }, typeof(Program));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
