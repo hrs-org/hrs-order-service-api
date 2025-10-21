@@ -19,7 +19,7 @@ public class RentalOrderController : ControllerBase
         _rentalOrderService = rentalOrderService;
     }
 
-    [HttpGet("{id:int}")]
+    [HttpGet("{id}")]
     [Authorize]
     public async Task<ActionResult<RentalOrderResponseDto>> GetById(string id)
     {
@@ -125,5 +125,6 @@ public class RentalOrderController : ControllerBase
         }
 
     }
+
 
 }

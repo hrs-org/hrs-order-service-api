@@ -66,10 +66,7 @@ public class RentalOrderService : IRentalOrderService
     public async Task<RentalOrderResponseDto> CreateAsync(CreateRentalOrderRequestDto dto)
     {
         var user = await _userContextService.GetUserAsync();
-        using var tx = await _rentalOrderMongoDBRepository.BeginTransactionAsync();
 
-        try
-        {
             if (dto.StartDate >= dto.EndDate)
                 throw new InvalidOperationException("End date must be after start date.");
 
@@ -261,7 +258,11 @@ public class RentalOrderService : IRentalOrderService
                     Status = 1, // Completed
                 });
                 if (!paymentId.IsSuccessStatusCode)
-                    throw new InvalidOperationException("Failed to record cash payment.");
+            {
+                await _rentalOrderMongoDBRepository.RemoveAsync(entity.Id);
+                throw new InvalidOperationException("Failed to record cash payment.");
+            }
+
                 entity.PaymentId = await paymentId.Content.ReadAsStringAsync();
                 // var payment = new Payment
                 // {
@@ -278,14 +279,9 @@ public class RentalOrderService : IRentalOrderService
 
             }
 
-            await tx.CommitTransactionAsync();
+
             return _mapper.Map<RentalOrderResponseDto>(entity);
-        }
-        catch
-        {
-            await tx.AbortTransactionAsync();
-            throw;
-        }
+
     }
 
 
@@ -303,10 +299,6 @@ public class RentalOrderService : IRentalOrderService
     {
         var user = await _userContextService.GetUserAsync();
 
-        using var tx = await _rentalOrderMongoDBRepository.BeginTransactionAsync();
-
-        try
-        {
             var order = await _rentalOrderMongoDBRepository.GetByStripeSessionIdAsync(sessionId)
                         ?? throw new KeyNotFoundException(OrderNotFound);
 
@@ -351,24 +343,14 @@ public class RentalOrderService : IRentalOrderService
             await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
             // await _paymentRepository.SaveChangesAsync();
 
-            await tx.CommitTransactionAsync();
             return _mapper.Map<RentalOrderResponseDto>(order);
-        }
-        catch
-        {
-            await tx.AbortTransactionAsync();
-            throw;
-        }
+
     }
 
     public async Task<RentalOrderResponseDto> ApproveAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
 
-        using var tx = await _rentalOrderMongoDBRepository.BeginTransactionAsync();
-
-        try
-        {
             var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
                         ?? throw new KeyNotFoundException(OrderNotFound);
 
@@ -382,25 +364,14 @@ public class RentalOrderService : IRentalOrderService
             order.UpdatedAt = DateTime.UtcNow;
 
             await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-
-            await tx.CommitTransactionAsync();
             return _mapper.Map<RentalOrderResponseDto>(order);
-        }
-        catch
-        {
-            await tx.AbortTransactionAsync();
-            throw;
-        }
+
     }
 
     public async Task<RentalOrderResponseDto> CancelAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
 
-        using var tx = await _rentalOrderMongoDBRepository.BeginTransactionAsync();
-
-        try
-        {
             var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
                         ?? throw new KeyNotFoundException(OrderNotFound);
 
@@ -415,24 +386,13 @@ public class RentalOrderService : IRentalOrderService
 
             await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
 
-            await tx.CommitTransactionAsync();
             return _mapper.Map<RentalOrderResponseDto>(order);
-        }
-        catch
-        {
-            await tx.AbortTransactionAsync();
-            throw;
-        }
+
     }
 
     public async Task<RentalOrderResponseDto> MarkAsRentedAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
-
-        using var tx = await _rentalOrderMongoDBRepository.BeginTransactionAsync();
-
-        try
-        {
             var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
                         ?? throw new KeyNotFoundException(OrderNotFound);
 
@@ -444,24 +404,13 @@ public class RentalOrderService : IRentalOrderService
             order.UpdatedAt = DateTime.UtcNow;
 
             await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-
-            await tx.CommitTransactionAsync();
             return _mapper.Map<RentalOrderResponseDto>(order);
-        }
-        catch
-        {
-            await tx.AbortTransactionAsync();
-            throw;
-        }
+
     }
 
     public async Task<RentalOrderResponseDto> ReturnAsync(string id, ReturnRentalOrderRequestDto dto)
     {
         var user = await _userContextService.GetUserAsync();
-        using var tx = await _rentalOrderMongoDBRepository.BeginTransactionAsync();
-
-        try
-        {
             var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
                         ?? throw new KeyNotFoundException($"Rental order {id} not found.");
 
@@ -524,15 +473,9 @@ public class RentalOrderService : IRentalOrderService
             order.UpdatedAt = DateTime.UtcNow;
 
             await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-            await tx.CommitTransactionAsync();
 
             return _mapper.Map<RentalOrderResponseDto>(order);
-        }
-        catch
-        {
-            await tx.AbortTransactionAsync();
-            throw;
-        }
+
     }
 
 
@@ -654,8 +597,6 @@ public class RentalOrderService : IRentalOrderService
             }
         }
     }
-
-
 
 
 
