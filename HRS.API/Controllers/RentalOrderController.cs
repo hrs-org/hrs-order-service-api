@@ -37,7 +37,7 @@ public class RentalOrderController : ControllerBase
 
     [HttpGet("bookings/{storeid}")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings(string storeid)
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings(int storeid)
     {
         var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled, RentalStatus.PendingPayment };
 
@@ -47,7 +47,7 @@ public class RentalOrderController : ControllerBase
 
     [HttpGet("rents/{storeid}")]
     [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents(string storeid)
+    public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents(int storeid)
     {
         var rentStatuses = new[] { RentalStatus.Rented };
 

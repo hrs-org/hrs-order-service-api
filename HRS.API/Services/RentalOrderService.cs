@@ -57,7 +57,7 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<IEnumerable<RentalOrderListDto>>(orders);
     }
 
-    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses, string storeId)
+    public async Task<IEnumerable<RentalOrderResponseDto>> GetByStatusesAsync(RentalStatus[] statuses, int storeId)
     {
         var orders = await _rentalOrderMongoDBRepository.GetByStatusesAndStoreId(statuses, storeId);
         return _mapper.Map<IEnumerable<RentalOrderResponseDto>>(orders);
@@ -500,7 +500,7 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<RentalOrderResponseDto>(order);
     }
 
-    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, string storeId)
+    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, int storeId)
     {
         if (itemId == null) return;
 

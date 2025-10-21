@@ -20,7 +20,7 @@ public class CatalogService : ICatalogService
         _itemClient = httpClientFactory.CreateClient("ItemService");
     }
 
-    public async Task<CatalogResponseDto> GetStoreAvailabilityAsync(DateTime startDate, DateTime endDate, string storeId)
+    public async Task<CatalogResponseDto> GetStoreAvailabilityAsync(DateTime startDate, DateTime endDate, int storeId)
     {
         var rentalDays = Math.Max(1, (endDate.Date - startDate.Date).Days);
         // var rootItems = await _itemRepository.GetRootItemsAsync();
@@ -82,9 +82,8 @@ public class CatalogService : ICatalogService
         };
     }
 
-    private async Task<List<CatalogPackageDto>> BuildPackageNodesAsync(DateTime startDate, DateTime endDate, int rentalDays, string storeId)
+    private async Task<List<CatalogPackageDto>> BuildPackageNodesAsync(DateTime startDate, DateTime endDate, int rentalDays, int storeId)
     {
-
         // var packages = await _packageRepository.GetAllAsync();
         var response = await _itemClient.GetFromJsonAsync<ApiResponse<List<PackageResponseDto>>>($"/api/package?storeId={storeId}"); // Adjust the endpoint as necessary
         if (response == null || response.Data == null || response.Data.Count == 0)
