@@ -601,7 +601,7 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-        public async Task<IEnumerable<RentalOrderMongoDB>> GetForDb()
+    public async Task<IEnumerable<RentalOrderMongoDB>> GetForDb()
     {
         return await _rentalOrderMongoDBRepository.GetAllAsync();
     }

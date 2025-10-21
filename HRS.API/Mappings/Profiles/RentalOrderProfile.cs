@@ -169,7 +169,7 @@ public class RentalOrderProfile : Profile
 
     }
 
-     private static int? SafeToNullableInt(string? value)
+    private static int? SafeToNullableInt(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
         try

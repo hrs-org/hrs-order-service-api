@@ -16,33 +16,22 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
     }
     public async Task<int> GetReservedQuantityAsync(string itemId, DateTime startDate, DateTime endDate)
     {
-
         var filter = Builders<RentalOrderMongoDB>.Filter.And(
-     Builders<RentalOrderMongoDB>.Filter.In(i => i.Status, new[] { RentalStatus.Booked, RentalStatus.Rented }),
-     Builders<RentalOrderMongoDB>.Filter.Lte(i => i.StartDate, endDate),
-     Builders<RentalOrderMongoDB>.Filter.Gte(i => i.EndDate, startDate)
- );
+            Builders<RentalOrderMongoDB>.Filter.In(i => i.Status, new[] { RentalStatus.Booked, RentalStatus.Rented }),
+            Builders<RentalOrderMongoDB>.Filter.Lte(i => i.StartDate, endDate),
+            Builders<RentalOrderMongoDB>.Filter.Gte(i => i.EndDate, startDate)
+            );
         var orders = await _itemscollection.Find(filter).ToListAsync();
 
-        int totalReserved = 0;
+        var totalReserved = 0;
 
         foreach (var order in orders)
         {
-            foreach (var item in order.RentalOrderItems.Where(i => i.ItemId == itemId))
-            {
-                totalReserved += item.Quantity;
-            }
-            foreach (var package in order.RentalOrderPackages)
-            {
-                foreach (var item in package.PackageItems.Where(i => i.ItemId == itemId))
-                {
-                    totalReserved += item.QuantityPerPackageSnapshot * package.Quantity;
-                }
-            }
+            totalReserved += order.RentalOrderItems.Where(i => i.ItemId == itemId).Sum(item => item.Quantity);
+            totalReserved += (from package in order.RentalOrderPackages from item in package.PackageItems.Where(i => i.ItemId == itemId) select item.QuantityPerPackageSnapshot * package.Quantity).Sum();
         }
 
         return totalReserved;
-
     }
     public async Task<IEnumerable<RentalOrderMongoDB>> GetByStatusesWithDetailsAsync(RentalStatus[] statuses)
     {
