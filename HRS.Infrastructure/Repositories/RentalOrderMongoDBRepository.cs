@@ -56,13 +56,13 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
 
         var statusValues = statuses.Select(s => (int)s).ToList();
 
-    var filterBuilder = Builders<RentalOrderMongoDB>.Filter;
-    var statusFilter = filterBuilder.In("Status", statusValues);
-    var storeFilter = filterBuilder.Eq("StoreId", storeId);
+        var filterBuilder = Builders<RentalOrderMongoDB>.Filter;
+        var statusFilter = filterBuilder.In("Status", statusValues);
+        var storeFilter = filterBuilder.Eq("StoreId", storeId);
 
-    var filter = filterBuilder.And(statusFilter, storeFilter);
+        var filter = filterBuilder.And(statusFilter, storeFilter);
 
-    return await _itemscollection.Find(filter).ToListAsync();
+        return await _itemscollection.Find(filter).ToListAsync();
     }
 
 }

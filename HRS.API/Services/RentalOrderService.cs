@@ -199,7 +199,8 @@ public class RentalOrderService : IRentalOrderService
                 {
 
                     foreach (var pi in pkgDto.SelectedItems)
-                    {   var finalItem = null as ItemResponseDto;
+                    {
+                        var finalItem = null as ItemResponseDto;
                         foreach (var pkgItemDto in pkg.Data.Items)
                         {
 
@@ -211,11 +212,11 @@ public class RentalOrderService : IRentalOrderService
                             finalItem = item?.Children?.FirstOrDefault(c => c.Id == pi.SelectedItemId);
                             if (finalItem != null)
                                 rentalPkg.PackageItems.Add(new PackageItem
-                            {
-                                ItemId = finalItem.Id,
-                                ItemNameSnapshot = finalItem.Name,
-                                QuantityPerPackageSnapshot = pkgDto.Quantity
-                            }
+                                {
+                                    ItemId = finalItem.Id,
+                                    ItemNameSnapshot = finalItem.Name,
+                                    QuantityPerPackageSnapshot = pkgDto.Quantity
+                                }
                             );
                         }
                     }
