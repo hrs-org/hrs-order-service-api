@@ -125,21 +125,5 @@ public class RentalOrderController : ControllerBase
 
     }
 
-    [HttpGet("/api/orders/get-for-db")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult> GetForDb(string orderId)
-    {
-        await _rentalOrderService.GetForDb(orderId);
-        return Ok(ApiResponse<string>.OkResponse("Order retrieved successfully"));
-    }
-
-    [HttpPost("/api/orders/create-db")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
-    public async Task<ActionResult<RentalOrderMongoDB>> CreateDB([FromBody] CreateRentalOrderRequestDto dto)
-    {
-        var result = await _rentalOrderService.CreateDB(dto);
-        return Ok(ApiResponse<RentalOrderMongoDB>.OkResponse(result, "Order created successfully"));
-    }
-
 
 }
