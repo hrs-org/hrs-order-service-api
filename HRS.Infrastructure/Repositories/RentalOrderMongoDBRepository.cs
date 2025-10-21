@@ -12,7 +12,7 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
     public RentalOrderMongoDBRepository(IMongoDatabase database, IMongoClient client) : base(database)
     {
         _client = client;
-        _itemscollection = database.GetCollection<RentalOrderMongoDB>("RentalOrders");
+        _itemscollection = database.GetCollection<RentalOrderMongoDB>("RentalOrderMongoDB");
     }
     public async Task<int> GetReservedQuantityAsync(string itemId, DateTime startDate, DateTime endDate)
     {
@@ -35,7 +35,9 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
     }
     public async Task<IEnumerable<RentalOrderMongoDB>> GetByStatusesWithDetailsAsync(RentalStatus[] statuses)
     {
-        var filter = Builders<RentalOrderMongoDB>.Filter.In(ro => ro.Status, statuses);
+        var statusValues = statuses.Select(s => (int)s).ToList();
+
+        var filter = Builders<RentalOrderMongoDB>.Filter.In("Status", statusValues);
         return await _itemscollection.Find(filter).ToListAsync();
     }
 
@@ -51,11 +53,16 @@ public class RentalOrderMongoDBRepository : CrudMongoDBRepository<RentalOrderMon
 
     public async Task<IEnumerable<RentalOrderMongoDB>> GetByStatusesAndStoreId(RentalStatus[] statuses, int storeId)
     {
-        var filter = Builders<RentalOrderMongoDB>.Filter.And(
-            Builders<RentalOrderMongoDB>.Filter.In(ro => ro.Status, statuses),
-            Builders<RentalOrderMongoDB>.Filter.Eq(ro => ro.StoreId, storeId)
-        );
-        return await _itemscollection.Find(filter).ToListAsync();
+
+        var statusValues = statuses.Select(s => (int)s).ToList();
+
+    var filterBuilder = Builders<RentalOrderMongoDB>.Filter;
+    var statusFilter = filterBuilder.In("Status", statusValues);
+    var storeFilter = filterBuilder.Eq("StoreId", storeId);
+
+    var filter = filterBuilder.And(statusFilter, storeFilter);
+
+    return await _itemscollection.Find(filter).ToListAsync();
     }
 
 }
