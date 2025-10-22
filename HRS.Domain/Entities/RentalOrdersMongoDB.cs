@@ -47,6 +47,7 @@ public class Item
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
     public string ItemId { get; set; } = null!;
+    public string? ParentId { get; set; }
     public string ItemNameSnapshot { get; set; } = null!;
     public decimal DailyRateSnapshot { get; set; }
     public int Quantity { get; set; }

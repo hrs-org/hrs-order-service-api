@@ -28,7 +28,7 @@ public class AvailabilityService : IAvailabilityService
         {
             var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}");
             var findwithChild = null as ApiResponse<ItemResponseDto>;
-            if (response?.Data ==  null)
+            if (response?.Data == null)
             {
                 findwithChild = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}/parent");
                 if (findwithChild == null || findwithChild.Data == null)

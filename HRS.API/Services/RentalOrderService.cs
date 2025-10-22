@@ -122,28 +122,29 @@ public class RentalOrderService : IRentalOrderService
             {
                 var isChild = false;
                 var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemDto.ItemId}"); // Adjust the endpoint as necessary
-                if (itemResponse?.Data == null){
+                if (itemResponse?.Data == null)
+                {
                     itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemDto.ItemId}/parent");
                     isChild = true;
                     if (itemResponse == null || itemResponse.Data == null)
                         throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
                 }
                 var item = itemResponse.Data;
-                var ParentId = item.ParentId ;
+                var ParentId = item.ParentId;
                 var applicableRate = null as ItemRateResponseDto;
 
-                    foreach (var dummyRate in item.Rates!)
+                foreach (var dummyRate in item.Rates!)
+                {
+                    if (dummyRate.MinDays <= rentalDays)
                     {
-                        if (dummyRate.MinDays <= rentalDays)
-                        {
-                            applicableRate = dummyRate;
-                        }
-
+                        applicableRate = dummyRate;
                     }
+
+                }
                 var rate = applicableRate;
                 var dailyRate = rate?.DailyRate ?? item.Price;
                 var itemChild = item.Children?.Where(c => c.Id == itemDto.ItemId).FirstOrDefault();
-                if (isChild )
+                if (isChild)
                 {
                     entity.RentalOrderItems.Add(new Item
                     {
@@ -505,7 +506,8 @@ public class RentalOrderService : IRentalOrderService
         {
             var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
             item = itemResponse;
-            if(itemResponse?.Data == null){
+            if (itemResponse?.Data == null)
+            {
                 itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}/parent");
                 item = itemResponse;
             }
