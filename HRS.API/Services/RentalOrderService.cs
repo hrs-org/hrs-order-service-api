@@ -87,8 +87,6 @@ public class RentalOrderService : IRentalOrderService
         if (dto.Packages is not null)
             foreach (var pkgDto in dto.Packages)
             {
-                // var pkg = await _packageRepository.GetByIdWithItemsAsync(pkgDto.PackageId)
-                //           ?? throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
                 var pkgResponse = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
                 if (pkgResponse == null || pkgResponse.Data == null || pkgResponse.Data.Items == null)
                     throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
@@ -104,7 +102,6 @@ public class RentalOrderService : IRentalOrderService
                 }
             }
 
-        // var entity = _mapper.Map<RentalOrder>(dto);
         var entity = _mapper.Map<RentalOrderMongoDB>(dto);
         entity.CreatedById = user.Id;
         entity.CreatedAt = DateTime.UtcNow;
@@ -116,14 +113,13 @@ public class RentalOrderService : IRentalOrderService
                 : entity is { PaymentType: OrderPaymentType.Cash, Channel: OrderChannel.Manual }
                     ? RentalStatus.Booked
                     : RentalStatus.PendingPayment;
-
+        entity.RentalOrderPackages = new Collection<Package>();
+        entity.RentalOrderItems = new Collection<Item>();
         var totalAmount = 0m;
 
         if (dto.Items is not null)
             foreach (var itemDto in dto.Items)
             {
-                // var item = await _itemRepository.GetByIdWithParentAsync(itemDto.ItemId)
-                //            ?? throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
                 var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemDto.ItemId}"); // Adjust the endpoint as necessary
                 var item = itemResponse?.Data;
                 if (item == null)
@@ -159,10 +155,7 @@ public class RentalOrderService : IRentalOrderService
 
                     }
                 }
-                // var rate = await _itemRateRepository.GetApplicableRateAsync(item.Parent?.Id ?? item.Id, rentalDays);
-                // var rateResponse = await _itemClient.GetFromJsonAsync<ItemRateResponseDto>($"/api/itemrate/getapplicablerate/{(ParentId.HasValue ? ParentId.Value : item.Id)}/{rentalDays}"); // Adjust the endpoint as necessary
                 var rate = applicableRate;
-                // var dailyRate = rate?.DailyRate ?? item.Parent?.Price ?? item.Price;
                 var dailyRate = rate?.DailyRate ?? parentResponse?.Data?.Price ?? item.Price;
 
                 entity.RentalOrderItems.Add(new Item
@@ -180,12 +173,10 @@ public class RentalOrderService : IRentalOrderService
             foreach (var pkgDto in dto.Packages)
             {
 
-                // var pkg = await _packageRepository.GetByIdWithItemsAsync(pkgDto.PackageId)
-                //           ?? throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
                 var pkg = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
                 if (pkg == null || pkg.Data == null || pkg.Data.Items == null)
                     throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
-                // var rate = await _packageRateRepository.GetApplicableRateAsync(pkg.Id, rentalDays);
+
                 var rate = null as PackageRateResponseDto;
                 foreach (var dummyRate in pkg.Data.Rates!)
                 {
@@ -204,42 +195,35 @@ public class RentalOrderService : IRentalOrderService
                     DailyRateSnapshot = dailyRate,
                     Quantity = pkgDto.Quantity
                 };
+                if (pkgDto.SelectedItems != null)
+                {
 
-                // foreach (var pi in pkg.Data.Items)
-                // {
+                    foreach (var pi in pkgDto.SelectedItems)
+                    {
+                        var finalItem = null as ItemResponseDto;
+                        foreach (var pkgItemDto in pkg.Data.Items)
+                        {
 
-                //     // var item = await _itemRepository.GetByIdWithChildrenAsync(pi.ItemId)
-                //     //    ?? throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                //     var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{pi.ItemId}"); // Adjust the endpoint as necessary
-                //     if (itemResponse == null || itemResponse.Data == null)
-                //         throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                //     var item = itemResponse.Data;
-                //     var finalItem = item;
-                //     var selectedItemId = item.Children?
-                //         .FirstOrDefault(si => si.Id == pi.ItemId)?.Id;
+                            var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{pkgItemDto.ItemId}"); // Adjust the endpoint as necessary
+                            if (itemResponse == null || itemResponse.Data == null)
+                                throw new KeyNotFoundException($"Item {pkgItemDto.ItemId} not found.");
+                            var item = itemResponse.Data;
 
-                //     if (item?.Children?.Count != 0)
-                //     {
-                //         if (selectedItemId == null)
-                //             throw new InvalidOperationException($"Variant required for item '{item?.Name}' in package '{pkg.Data.Name}'.");
-
-                //         var selectedChild = item?.Children?.FirstOrDefault(c => c.Id == selectedItemId)
-                //                             ?? throw new InvalidOperationException($"Invalid variant selection for '{item?.Name}'.");
-
-                //         finalItem = selectedChild;
-                //     }
-                //     if (finalItem == null)
-                //         throw new KeyNotFoundException($"Item {pi.ItemId} not found.");
-                //     rentalPkg.PackageItems.Add(new PackageItem
-                //     {
-                //         ItemId = finalItem.Id,
-                //         ItemNameSnapshot = finalItem.Name,
-                //         QuantityPerPackageSnapshot = pi.Quantity
-                //     });
-                // }
+                            finalItem = item?.Children?.FirstOrDefault(c => c.Id == pi.SelectedItemId);
+                            if (finalItem != null)
+                                rentalPkg.PackageItems.Add(new PackageItem
+                                {
+                                    ItemId = finalItem.Id,
+                                    ItemNameSnapshot = finalItem.Name,
+                                    QuantityPerPackageSnapshot = pkgDto.Quantity
+                                }
+                            );
+                        }
+                    }
+                }
 
                 entity.RentalOrderPackages.Add(rentalPkg);
-                totalAmount += dailyRate * pkgDto.Quantity * rentalDays;
+                totalAmount += dailyRate * (pkgDto?.Quantity ?? 1) * rentalDays;
             }
 
 
@@ -267,22 +251,9 @@ public class RentalOrderService : IRentalOrderService
             var payment = await paymentId.Content.ReadFromJsonAsync<ApiResponse<string>>();
             entity.PaymentId = payment?.Data;
 
-            // var payment = new Payment
-            // {
-            //     RentalOrderId = entity.Id,
-            //     Amount = entity.TotalAmount,
-            //     PaymentType = PaymentType.Cash,
-            //     PaymentDate = DateTime.UtcNow,
-            //     Status = PaymentStatus.Completed,
-            //     CreatedBy = user,
-            //     CreatedAt = DateTime.UtcNow
-            // };
-            // await _paymentRepository.AddAsync(payment);
-            // await _paymentRepository.SaveChangesAsync();
-
         }
 
-
+        await _rentalOrderMongoDBRepository.UpdateAsync(entity, entity.Id);
         return _mapper.Map<RentalOrderResponseDto>(entity);
 
     }
@@ -291,7 +262,6 @@ public class RentalOrderService : IRentalOrderService
     // add controller for this method
     public async Task AssignStripeSessionIdAsync(string orderId, string sessionId)
     {
-        // Console.WriteLine($"Assigning Stripe Session ID: {sessionId} to Order ID: {orderId}");
         var order = await _rentalOrderMongoDBRepository.GetByIdAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
 
         order.StripeSessionId = sessionId;
@@ -305,7 +275,6 @@ public class RentalOrderService : IRentalOrderService
         var order = await _rentalOrderMongoDBRepository.GetByStripeSessionIdAsync(sessionId)
                     ?? throw new KeyNotFoundException(OrderNotFound);
 
-        // var existingPayments = await _paymentRepository.GetByRentalOrderIdAsync(order.Id);
         var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
         var existingPayments = response;
         if (existingPayments != null)
@@ -344,7 +313,6 @@ public class RentalOrderService : IRentalOrderService
         }
 
         await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-        // await _paymentRepository.SaveChangesAsync();
 
         return _mapper.Map<RentalOrderResponseDto>(order);
 
@@ -485,7 +453,6 @@ public class RentalOrderService : IRentalOrderService
     public async Task<RentalOrderResponseDto> CloseAsync(string id)
     {
         var user = await _userContextService.GetUserAsync();
-
         var order = await _rentalOrderMongoDBRepository.GetByIdAsync(id)
                     ?? throw new KeyNotFoundException(OrderNotFound);
 
@@ -499,7 +466,6 @@ public class RentalOrderService : IRentalOrderService
         order.UpdatedAt = DateTime.UtcNow;
 
         await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
-
         return _mapper.Map<RentalOrderResponseDto>(order);
     }
 
@@ -530,7 +496,6 @@ public class RentalOrderService : IRentalOrderService
         if (repairQty + damagedQty + lostQty == 0)
             return; // nothing to do
 
-        // var item = await _itemRepository.GetByIdAsync(itemId.Value);
         var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
         var item = itemResponse;
 
@@ -559,7 +524,7 @@ public class RentalOrderService : IRentalOrderService
 
         if (entities.Count <= 0) return;
         var batchPayload = new { Entries = entities };
-        var resp = await _itemMaintenanceClient.PostAsJsonAsync("/api/item-maintenance/batch", batchPayload);
+        var resp = await _itemMaintenanceClient.PostAsJsonAsync("/api/item-maintenances/batch", batchPayload);
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException("Failed to record item maintenance batch.");
     }
@@ -601,24 +566,6 @@ public class RentalOrderService : IRentalOrderService
         }
     }
 
-    public async Task<IEnumerable<RentalOrderMongoDB>> GetForDb()
-    {
-        return await _rentalOrderMongoDBRepository.GetAllAsync();
-    }
-    public async Task<RentalOrderMongoDB> CreateDB(CreateRentalOrderRequestDto dto)
-    {
-        var user = await _userContextService.GetUserAsync();
-
-        var entity = _mapper.Map<RentalOrderMongoDB>(dto);
-        entity.CreatedById = user.Id;
-        entity.CreatedAt = DateTime.UtcNow;
-        entity.UpdatedById = user.Id;
-        entity.UpdatedAt = DateTime.UtcNow;
-
-        await _rentalOrderMongoDBRepository.AddAsync(entity);
-
-        return entity;
-    }
 
 
 
