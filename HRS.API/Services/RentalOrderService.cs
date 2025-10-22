@@ -268,7 +268,7 @@ public class RentalOrderService : IRentalOrderService
         await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
     }
 
-    public async Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, long? amount)
+    public async Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, int? amount)
     {
         var user = await _userContextService.GetUserAsync();
 
@@ -276,22 +276,23 @@ public class RentalOrderService : IRentalOrderService
                     ?? throw new KeyNotFoundException(OrderNotFound);
 
         var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
-        var existingPayments = response;
+        var existingPayments = response?.Data;
         if (existingPayments != null)
             throw new DuplicateNameException("Payment has already been recorded for this order.");
 
-        var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
+        var paymentId = await _paymentClient.PostAsJsonAsync("/api/payments", new
         {
             OrderId = order.Id,
-            Amount = (decimal)(amount ?? 0) / 100,
+            Amount = amount ?? 0,
             SessionId = sessionId,
             PaymentType = 0, // stripe
             Status = 1, // Completed
+
+
         });
         if (!paymentId.IsSuccessStatusCode)
             throw new InvalidOperationException("Failed to record stripe payment.");
         order.PaymentId = await paymentId.Content.ReadAsStringAsync();
-
 
 
         if (order.Status != RentalStatus.PendingPayment)
@@ -425,7 +426,7 @@ public class RentalOrderService : IRentalOrderService
                     orderPkgItem.DamagedQty = pkgItemDto.DamagedQty;
                     orderPkgItem.LostQty = pkgItemDto.LostQty;
 
-                    await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id, order.StoreId);
+                    await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id, order.StoreId, pkgDto.RentalOrderPackageId);
                 }
             }
 
@@ -469,7 +470,7 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<RentalOrderResponseDto>(order);
     }
 
-    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, int storeId)
+    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, int storeId, string? packageId = null)
     {
         if (itemId == null) return;
 
@@ -492,12 +493,22 @@ public class RentalOrderService : IRentalOrderService
             default:
                 return;
         }
+        var item = null as ApiResponse<ItemResponseDto>;
 
         if (repairQty + damagedQty + lostQty == 0)
             return; // nothing to do
+        if (packageId != null)
+        {
+            var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/packages/{packageId}"); // Adjust the endpoint as necessary
+            item = itemResponse;
+        }
+        else
+        {
+            var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
+            item = itemResponse;
+        }
 
-        var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
-        var item = itemResponse;
+
 
         if (item == null || item.Data == null)
             return;
