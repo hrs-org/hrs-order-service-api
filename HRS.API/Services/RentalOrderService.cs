@@ -268,7 +268,7 @@ public class RentalOrderService : IRentalOrderService
         await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
     }
 
-    public async Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, long? amount)
+    public async Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, int? amount)
     {
         var user = await _userContextService.GetUserAsync();
 
@@ -276,22 +276,23 @@ public class RentalOrderService : IRentalOrderService
                     ?? throw new KeyNotFoundException(OrderNotFound);
 
         var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
-        var existingPayments = response;
+        var existingPayments = response?.Data;
         if (existingPayments != null)
             throw new DuplicateNameException("Payment has already been recorded for this order.");
 
-        var paymentId = await _paymentClient.PostAsJsonAsync("/api/payment", new
+        var paymentId = await _paymentClient.PostAsJsonAsync("/api/payments", new
         {
             OrderId = order.Id,
-            Amount = (decimal)(amount ?? 0) / 100,
+            Amount = amount ?? 0 ,
             SessionId = sessionId,
             PaymentType = 0, // stripe
             Status = 1, // Completed
+
+
         });
         if (!paymentId.IsSuccessStatusCode)
             throw new InvalidOperationException("Failed to record stripe payment.");
         order.PaymentId = await paymentId.Content.ReadAsStringAsync();
-
 
 
         if (order.Status != RentalStatus.PendingPayment)
