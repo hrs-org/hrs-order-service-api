@@ -283,7 +283,7 @@ public class RentalOrderService : IRentalOrderService
         var paymentId = await _paymentClient.PostAsJsonAsync("/api/payments", new
         {
             OrderId = order.Id,
-            Amount = amount ?? 0 ,
+            Amount = amount ?? 0,
             SessionId = sessionId,
             PaymentType = 0, // stripe
             Status = 1, // Completed
@@ -470,7 +470,7 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<RentalOrderResponseDto>(order);
     }
 
-    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, int storeId,string? packageId = null)
+    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, int storeId, string? packageId = null)
     {
         if (itemId == null) return;
 
@@ -501,7 +501,8 @@ public class RentalOrderService : IRentalOrderService
         {
             var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/packages/{packageId}"); // Adjust the endpoint as necessary
             item = itemResponse;
-        }else
+        }
+        else
         {
             var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
             item = itemResponse;
