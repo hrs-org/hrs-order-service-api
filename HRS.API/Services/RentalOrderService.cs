@@ -426,7 +426,7 @@ public class RentalOrderService : IRentalOrderService
                     orderPkgItem.DamagedQty = pkgItemDto.DamagedQty;
                     orderPkgItem.LostQty = pkgItemDto.LostQty;
 
-                    await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id, order.StoreId);
+                    await HandleMaintenanceAsync(orderPkgItem.ItemId, order.Id, pkgItemDto, user.Id, order.StoreId, pkgDto.RentalOrderPackageId);
                 }
             }
 
@@ -470,7 +470,7 @@ public class RentalOrderService : IRentalOrderService
         return _mapper.Map<RentalOrderResponseDto>(order);
     }
 
-    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, int storeId)
+    private async Task HandleMaintenanceAsync(string? itemId, string orderId, object dto, int userId, int storeId,string? packageId = null)
     {
         if (itemId == null) return;
 
@@ -493,12 +493,21 @@ public class RentalOrderService : IRentalOrderService
             default:
                 return;
         }
+        var item = null as ApiResponse<ItemResponseDto>;
 
         if (repairQty + damagedQty + lostQty == 0)
             return; // nothing to do
+        if (packageId != null)
+        {
+            var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/packages/{packageId}"); // Adjust the endpoint as necessary
+            item = itemResponse;
+        }else
+        {
+            var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
+            item = itemResponse;
+        }
 
-        var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
-        var item = itemResponse;
+
 
         if (item == null || item.Data == null)
             return;
