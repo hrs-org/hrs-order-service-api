@@ -468,24 +468,24 @@ public class CatalogServiceTests
     }
 
     [Fact]
-public async Task Throws_WhenItemNotFound()
-{
-    var start = DateTime.Today;
-    var end = start.AddDays(1);
+    public async Task Throws_WhenItemNotFound()
+    {
+        var start = DateTime.Today;
+        var end = start.AddDays(1);
 
-    FakeHttpMessageHandler.AddJsonResponse("/api/items/store/1", new { data = (object?)null });
+        FakeHttpMessageHandler.AddJsonResponse("/api/items/store/1", new { data = (object?)null });
 
-    var client = new HttpClient(new FakeHttpMessageHandler());
-    var httpFactory = Substitute.For<IHttpClientFactory>();
-    httpFactory.CreateClient("ItemService").Returns(client);
+        var client = new HttpClient(new FakeHttpMessageHandler());
+        var httpFactory = Substitute.For<IHttpClientFactory>();
+        httpFactory.CreateClient("ItemService").Returns(client);
 
-    var service = new CatalogService(_availabilityService, httpFactory);
+        var service = new CatalogService(_availabilityService, httpFactory);
 
-    Func<Task> act = async () => await service.GetStoreAvailabilityAsync(start, end, 1);
+        Func<Task> act = async () => await service.GetStoreAvailabilityAsync(start, end, 1);
 
-    await act.Should().ThrowAsync<InvalidOperationException>()
-             .WithMessage("An invalid request URI was provided. Either the request URI must be an absolute URI or BaseAddress must be set.");
-}
+        await act.Should().ThrowAsync<InvalidOperationException>()
+                 .WithMessage("An invalid request URI was provided. Either the request URI must be an absolute URI or BaseAddress must be set.");
+    }
 
 
 

@@ -105,19 +105,19 @@ public class UserContextServiceTests
         user.Email.Should().Be("unknown@example.com");  // no email claim, default value
     }
 
-[Fact]
-public async Task GetUserAsync_UsesDefaultValues_WhenNoClaimsPresent()
-{
-    _httpContextAccessor.HttpContext.Returns(new DefaultHttpContext());
+    [Fact]
+    public async Task GetUserAsync_UsesDefaultValues_WhenNoClaimsPresent()
+    {
+        _httpContextAccessor.HttpContext.Returns(new DefaultHttpContext());
 
-    var user = await _service.GetUserAsync();
+        var user = await _service.GetUserAsync();
 
-    user.Id.Should().Be(0);                         // no ID claim
-    user.Email.Should().Be("unknown@example.com");  // no email claim
-    user.FirstName.Should().Be("Unknown");          // default
-    user.LastName.Should().Be("User");              // default
-    user.Role.Should().Be("User");                  // default
-}
+        user.Id.Should().Be(0);                         // no ID claim
+        user.Email.Should().Be("unknown@example.com");  // no email claim
+        user.FirstName.Should().Be("Unknown");          // default
+        user.LastName.Should().Be("User");              // default
+        user.Role.Should().Be("User");                  // default
+    }
 
 
 }

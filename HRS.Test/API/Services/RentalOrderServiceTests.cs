@@ -67,7 +67,7 @@ public class RentalOrderServiceTests
     }
 
     // Ensure the shared stub map is clean between tests
-        // NOTE: Do NOT clear HttpMessageHandlerStub.ResponseMap globally to avoid races with other test classes.
+    // NOTE: Do NOT clear HttpMessageHandlerStub.ResponseMap globally to avoid races with other test classes.
 
     [Fact]
     public async Task GetAsync_ReturnsMappedDto_WhenOrderExists()
@@ -84,7 +84,7 @@ public class RentalOrderServiceTests
     [Fact]
     public async Task GetAsync_Throws_WhenOrderNotFound()
     {
-    _repo.GetByIdAsync("missing").Returns((RentalOrderMongoDB?)null);
+        _repo.GetByIdAsync("missing").Returns((RentalOrderMongoDB?)null);
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetAsync("missing"));
     }
 
@@ -142,9 +142,9 @@ public class RentalOrderServiceTests
         _mapper.Map<RentalOrderMongoDB>(dto).Returns(new RentalOrderMongoDB { Id = "new-missing-order", StoreId = 1 });
 
         // item endpoint returns null and parent endpoint also returns null
-    var missingItemId = dto.Items!.First().ItemId;
-    HttpMessageHandlerStub.ResponseMap[$"/api/items/{missingItemId}"] = new ApiResponse<ItemResponseDto> { Data = null };
-    HttpMessageHandlerStub.ResponseMap[$"/api/items/{missingItemId}/parent"] = new ApiResponse<ItemResponseDto> { Data = null };
+        var missingItemId = dto.Items!.First().ItemId;
+        HttpMessageHandlerStub.ResponseMap[$"/api/items/{missingItemId}"] = new ApiResponse<ItemResponseDto> { Data = null };
+        HttpMessageHandlerStub.ResponseMap[$"/api/items/{missingItemId}/parent"] = new ApiResponse<ItemResponseDto> { Data = null };
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.CreateAsync(dto));
     }
@@ -161,14 +161,14 @@ public class RentalOrderServiceTests
             Price = 10m,
             Quantity = 10,
             // ParentId omitted for parent
-                Children = new List<ItemResponseDto> { new ItemResponseDto { Id = childId, Name = "ChildItem", Price = 5m } },
-                // provide at least one rate so service's foreach on Rates won't NRE
-                Rates = new List<ItemRateResponseDto> { new ItemRateResponseDto { MinDays = 1, DailyRate = 5m } }
+            Children = new List<ItemResponseDto> { new ItemResponseDto { Id = childId, Name = "ChildItem", Price = 5m } },
+            // provide at least one rate so service's foreach on Rates won't NRE
+            Rates = new List<ItemRateResponseDto> { new ItemRateResponseDto { MinDays = 1, DailyRate = 5m } }
         };
 
         // Map item fetch to parent response (so isChild path executes)
-    HttpMessageHandlerStub.ResponseMap[$"/api/items/{childId}"] = new ApiResponse<ItemResponseDto> { Data = null };
-    HttpMessageHandlerStub.ResponseMap[$"/api/items/{childId}/parent"] = new ApiResponse<ItemResponseDto> { Data = parent };
+        HttpMessageHandlerStub.ResponseMap[$"/api/items/{childId}"] = new ApiResponse<ItemResponseDto> { Data = null };
+        HttpMessageHandlerStub.ResponseMap[$"/api/items/{childId}/parent"] = new ApiResponse<ItemResponseDto> { Data = parent };
 
         var dto = new CreateRentalOrderRequestDto
         {
@@ -183,11 +183,11 @@ public class RentalOrderServiceTests
         // availability returns sufficient quantity
         _availability.GetAvailableQuantityAsync(childId, dto.StartDate, dto.EndDate).Returns(5);
 
-    // ensure user and mapper return values to avoid NRE
-    _userService.GetUserAsync().Returns(Task.FromResult(new HRS.Shared.Core.Dtos.UserResponseDto { Id = 1, Email = "u@e.com", FirstName = "T", LastName = "U", Role = "User" }));
-    // mapper should map dto to entity when adding and map back on return
-    _mapper.Map<RentalOrderMongoDB>(dto).Returns(new RentalOrderMongoDB { Id = "newOrder", StoreId = 1, PaymentType = HRS.Domain.Enums.OrderPaymentType.Other, Channel = HRS.Domain.Enums.OrderChannel.Online });
-    _mapper.Map<RentalOrderResponseDto>(Arg.Any<RentalOrderMongoDB>()).Returns(new RentalOrderResponseDto { Id = "newOrder", StoreId = 1, Status = "Pending", Channel = "Online", PaymentType = "Cash" });
+        // ensure user and mapper return values to avoid NRE
+        _userService.GetUserAsync().Returns(Task.FromResult(new HRS.Shared.Core.Dtos.UserResponseDto { Id = 1, Email = "u@e.com", FirstName = "T", LastName = "U", Role = "User" }));
+        // mapper should map dto to entity when adding and map back on return
+        _mapper.Map<RentalOrderMongoDB>(dto).Returns(new RentalOrderMongoDB { Id = "newOrder", StoreId = 1, PaymentType = HRS.Domain.Enums.OrderPaymentType.Other, Channel = HRS.Domain.Enums.OrderChannel.Online });
+        _mapper.Map<RentalOrderResponseDto>(Arg.Any<RentalOrderMongoDB>()).Returns(new RentalOrderResponseDto { Id = "newOrder", StoreId = 1, Status = "Pending", Channel = "Online", PaymentType = "Cash" });
 
         await _service.CreateAsync(dto);
 
@@ -383,8 +383,8 @@ public class RentalOrderServiceTests
         HttpMessageHandlerStub.ResponseMap[$"/api/items/{order.RentalOrderItems.First().ItemId}"] = new ApiResponse<ItemResponseDto> { Data = new ItemResponseDto { Id = order.RentalOrderItems.First().ItemId, Quantity = 10 } };
 
         // Configure maintenance POST to return 500 (simulate failure)
-    // Because our stub only supports mapping path->object for GET, create a special handler that returns a fixed StatusCode for POST
-    var failingClient = new HttpClient(new FixedStatusHandler(HttpStatusCode.InternalServerError)) { BaseAddress = new Uri("http://itemmaintservice") };
+        // Because our stub only supports mapping path->object for GET, create a special handler that returns a fixed StatusCode for POST
+        var failingClient = new HttpClient(new FixedStatusHandler(HttpStatusCode.InternalServerError)) { BaseAddress = new Uri("http://itemmaintservice") };
 
         var httpFactory = Substitute.For<IHttpClientFactory>();
         httpFactory.CreateClient("ItemService").Returns(_itemClient);
@@ -487,7 +487,7 @@ public class RentalOrderServiceTests
 
         // mapper returns entity configured as Cash + POS
         _mapper.Map<RentalOrderMongoDB>(dto).Returns(new RentalOrderMongoDB { Id = "cash1", StoreId = 1, PaymentType = OrderPaymentType.Cash, Channel = OrderChannel.POS });
-    _mapper.Map<RentalOrderResponseDto>(Arg.Any<RentalOrderMongoDB>()).Returns(new RentalOrderResponseDto { Id = "cash1", StoreId = 1, Status = "Pending", Channel = "Online", PaymentType = "Cash" });
+        _mapper.Map<RentalOrderResponseDto>(Arg.Any<RentalOrderMongoDB>()).Returns(new RentalOrderResponseDto { Id = "cash1", StoreId = 1, Status = "Pending", Channel = "Online", PaymentType = "Cash" });
 
         // item lookup returns a valid item
         HttpMessageHandlerStub.ResponseMap[$"/api/items/i-cash"] = new ApiResponse<ItemResponseDto> { Data = new ItemResponseDto { Id = "i-cash", Price = 10m, Quantity = 5, Rates = new List<ItemRateResponseDto>() } };
@@ -551,8 +551,8 @@ public class RentalOrderServiceTests
         var order = new RentalOrderMongoDB { Id = "ap1", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.POS };
         _repo.GetByStripeSessionIdAsync("sess-ap-fail").Returns(order);
 
-    // payment client: GET returns Data = null, POST returns 500
-    var failingPaymentClient = new HttpClient(new PaymentHandler(getReturnsNull: true, postStatus: HttpStatusCode.InternalServerError, postPayload: null)) { BaseAddress = new Uri("http://paymentservice") };
+        // payment client: GET returns Data = null, POST returns 500
+        var failingPaymentClient = new HttpClient(new PaymentHandler(getReturnsNull: true, postStatus: HttpStatusCode.InternalServerError, postPayload: null)) { BaseAddress = new Uri("http://paymentservice") };
         var httpFactory = Substitute.For<IHttpClientFactory>();
         httpFactory.CreateClient("ItemService").Returns(_itemClient);
         httpFactory.CreateClient("ItemMaintenanceService").Returns(_itemMaintenanceClient);
@@ -571,8 +571,8 @@ public class RentalOrderServiceTests
         var order = new RentalOrderMongoDB { Id = "ap2", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.POS };
         _repo.GetByStripeSessionIdAsync("sess-ap-ok").Returns(order);
 
-    // payment client: GET returns Data = null, POST returns ApiResponse<string> with payment id
-    var paymentClient = new HttpClient(new PaymentHandler(getReturnsNull: true, postStatus: HttpStatusCode.OK, postPayload: "ap-payment-id")) { BaseAddress = new Uri("http://paymentservice") };
+        // payment client: GET returns Data = null, POST returns ApiResponse<string> with payment id
+        var paymentClient = new HttpClient(new PaymentHandler(getReturnsNull: true, postStatus: HttpStatusCode.OK, postPayload: "ap-payment-id")) { BaseAddress = new Uri("http://paymentservice") };
         var httpFactory = Substitute.For<IHttpClientFactory>();
         httpFactory.CreateClient("ItemService").Returns(_itemClient);
         httpFactory.CreateClient("ItemMaintenanceService").Returns(_itemMaintenanceClient);
@@ -775,8 +775,8 @@ public class RentalOrderServiceTests
         _availability.GetAvailableQuantityAsync("i-nocash", dto.StartDate, dto.EndDate).Returns(1);
         _userService.GetUserAsync().Returns(Task.FromResult(new HRS.Shared.Core.Dtos.UserResponseDto { Id = 55, Email = "no@cash.com", FirstName = "No", LastName = "Cash", Role = "User" }));
 
-    _mapper.Map<RentalOrderMongoDB>(dto).Returns(new RentalOrderMongoDB { Id = "nocash1", StoreId = 1, PaymentType = OrderPaymentType.Other, Channel = OrderChannel.Online });
-    _mapper.Map<RentalOrderResponseDto>(Arg.Any<RentalOrderMongoDB>()).Returns(new RentalOrderResponseDto { Id = "nocash1", StoreId = 1, Status = "PendingPayment", Channel = "Online", PaymentType = "Other" });
+        _mapper.Map<RentalOrderMongoDB>(dto).Returns(new RentalOrderMongoDB { Id = "nocash1", StoreId = 1, PaymentType = OrderPaymentType.Other, Channel = OrderChannel.Online });
+        _mapper.Map<RentalOrderResponseDto>(Arg.Any<RentalOrderMongoDB>()).Returns(new RentalOrderResponseDto { Id = "nocash1", StoreId = 1, Status = "PendingPayment", Channel = "Online", PaymentType = "Other" });
 
         HttpMessageHandlerStub.ResponseMap[$"/api/items/i-nocash"] = new ApiResponse<ItemResponseDto> { Data = new ItemResponseDto { Id = "i-nocash", Price = 12m, Quantity = 5, Rates = new List<ItemRateResponseDto>() } };
 
@@ -839,9 +839,9 @@ public class RentalOrderServiceTests
             }
         };
 
-    // item GET / package endpoint returns item info (HandleMaintenanceAsync requests /api/packages/{packageId} when packageId != null)
-    HttpMessageHandlerStub.ResponseMap[$"/api/items/{pkgItem.ItemId}"] = new ApiResponse<ItemResponseDto> { Data = new ItemResponseDto { Id = pkgItem.ItemId, Quantity = 5 } };
-    HttpMessageHandlerStub.ResponseMap[$"/api/packages/{pkg.PackageId}"] = new ApiResponse<ItemResponseDto> { Data = new ItemResponseDto { Id = pkgItem.ItemId, Quantity = 5 } };
+        // item GET / package endpoint returns item info (HandleMaintenanceAsync requests /api/packages/{packageId} when packageId != null)
+        HttpMessageHandlerStub.ResponseMap[$"/api/items/{pkgItem.ItemId}"] = new ApiResponse<ItemResponseDto> { Data = new ItemResponseDto { Id = pkgItem.ItemId, Quantity = 5 } };
+        HttpMessageHandlerStub.ResponseMap[$"/api/packages/{pkg.PackageId}"] = new ApiResponse<ItemResponseDto> { Data = new ItemResponseDto { Id = pkgItem.ItemId, Quantity = 5 } };
 
         // maintenance client success
         var maintSuccess = new HttpClient(new FixedStatusHandler(HttpStatusCode.OK)) { BaseAddress = new Uri("http://itemmaintservice") };
