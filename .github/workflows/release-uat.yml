@@ -29,7 +29,8 @@ env:
     SERVICE_NAME: hrs-order-service
 
 jobs:
-    deploy:
+    deploy-to-aks:
+        name: Deploy to AKS ${{ github.event.inputs.environment }}
         runs-on: ubuntu-latest
         environment: ${{ github.event.inputs.environment }}
 
@@ -227,3 +228,36 @@ jobs:
             - name: Azure Logout
               run: az logout
               if: always()
+
+    rollback:
+        name: Rollback if needed
+        runs-on: ubuntu-latest
+        needs: deploy-to-aks
+        if: failure()
+        environment: ${{ github.event.inputs.environment }}
+        steps:
+            - name: Set up Azure CLI
+              uses: azure/login@v1
+              with:
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+            - name: Set up kubectl
+              uses: azure/setup-kubectl@v3
+              with:
+                  version: "latest"
+
+            - name: Get AKS credentials
+              run: |
+                  az aks get-credentials \
+                    --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                    --name ${{ env.AKS_CLUSTER_NAME }} \
+                    --overwrite-existing
+
+            - name: Rollback deployment
+              run: |
+                  echo "Rolling back deployment..."
+                  kubectl rollout undo deployment/${{ env.DEPLOYMENT_NAME }} -n ${{ env.NAMESPACE }}
+                  kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} -n ${{ env.NAMESPACE }} --timeout=300s
+
+                  echo "Rollback completed. Current deployment status:"
+                  kubectl get deployment ${{ env.DEPLOYMENT_NAME }} -n ${{ env.NAMESPACE }}

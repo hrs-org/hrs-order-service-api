@@ -49,16 +49,101 @@ jobs:
             - name: Build project
               run: dotnet build HikingRentalStore.sln --configuration Release --no-restore
 
-            - name: Run tests
-              run: dotnet test HRS.Test/HRS.Test.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+            - name: Create coverage directory
+              run: mkdir -p ./coverage
+
+            - name: Install dotnet-coverage tool
+              run: dotnet tool install --global dotnet-coverage
+
+            - name: Run tests with coverage
+              run: |
+                  dotnet-coverage collect "dotnet test HRS.Test/HRS.Test.csproj --configuration Release --no-build --verbosity normal" \
+                    -f xml -o "./coverage/coverage.xml"
+                    
+                  dotnet test HRS.Test/HRS.Test.csproj --configuration Release --no-build \
+                    --logger "trx;LogFileName=TestResults.trx" \
+                    --results-directory ./coverage
+                    
+                  ls -la ./coverage/
 
             - name: Upload test results
               uses: actions/upload-artifact@v4
               if: always()
               with:
                   name: test-results
-                  path: "**/test-results.trx"
+                  path: ./coverage/
                   retention-days: 7
+
+    code-quality:
+        name: Code Quality Analysis (SAST)
+        runs-on: ubuntu-latest
+        needs: build
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: 8.0.x
+
+            - name: Install SonarCloud scanner
+              run: dotnet tool install --global dotnet-sonarscanner
+
+            - name: Authenticate with GitHub Packages
+              run: |
+                  dotnet nuget remove source github 2>/dev/null || true
+                  dotnet nuget add source --username ${{ github.actor }} \
+                    --password ${{ secrets.PACKAGES_READ_TOKEN }} \
+                    --store-password-in-clear-text \
+                    --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
+            - name: Download test results
+              uses: actions/download-artifact@v4
+              with:
+                  name: test-results
+                  path: ./coverage
+
+            - name: Begin SonarCloud analysis
+              env:
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+              run: |
+                  COVERAGE_PATH=$(readlink -f ./coverage/coverage.xml)
+                  echo "Using coverage file: $COVERAGE_PATH"
+
+                  SONAR_PARAMS=""
+                  if [ "${{ github.event_name }}" = "pull_request" ]; then
+                    SONAR_PARAMS="/d:sonar.pullrequest.key=${{ github.event.number }} /d:sonar.pullrequest.branch=${{ github.head_ref }} /d:sonar.pullrequest.base=${{ github.base_ref }}"
+                  else
+                    SONAR_PARAMS="/d:sonar.branch.name=${{ github.ref_name }}"
+                  fi
+
+                  dotnet-sonarscanner begin \
+                    /k:"hrs-org_hrs-order-service-api" \
+                    /o:"hrs-org" \
+                    /d:sonar.projectBaseDir="$(pwd)" \
+                    /d:sonar.token="$SONAR_TOKEN" \
+                    /d:sonar.host.url="https://sonarcloud.io" \
+                    /d:sonar.cs.vstest.reportsPaths="./coverage/TestResults.trx" \
+                    /d:sonar.cs.vscoveragexml.reportsPaths="$COVERAGE_PATH" \
+                    /d:sonar.coverage.exclusions="**/HRS.Test/**,**/*Test*.cs,**/Migrations/**,**/Program.cs" \
+                    /d:sonar.exclusions="**/Migrations/**" \
+                    /d:sonar.scm.disabled=true \
+                    /d:sonar.qualitygate.wait=false \
+                    $SONAR_PARAMS
+
+            - name: Restore dependencies
+              run: dotnet restore HikingRentalStore.sln
+
+            - name: Build for SonarCloud analysis
+              run: dotnet build HikingRentalStore.sln --configuration Release --no-restore
+
+            - name: End SonarCloud analysis
+              env:
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+              run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
     lint:
         name: Lint
@@ -131,7 +216,7 @@ jobs:
     docker-build:
         name: Build & Push Docker Image to ACR
         runs-on: ubuntu-latest
-        needs: [build, lint, security-scan]
+        needs: [build, code-quality, lint, security-scan]
         if: github.event_name == 'push'
         environment: uat
         outputs:
@@ -263,6 +348,7 @@ jobs:
                     -e Jwt__Key="${{ secrets.JWT_SECRET_KEY }}" \
                     -e Jwt__Issuer="HRSApp" \
                     -e Jwt__Audience="HRSUsers" \
+                    -e AllowedOrigins="http://localhost:4200/" \
                     -e ItemMaintenanceService="http://localhost:5001/" \
                     -e PaymentService="http://localhost:5010/" \
                     -e ItemService="http://localhost:5001/" \
