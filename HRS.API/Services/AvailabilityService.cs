@@ -27,7 +27,15 @@ public class AvailabilityService : IAvailabilityService
         if (item == null)
         {
             var response = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}");
-            item = response?.Data ?? throw new KeyNotFoundException($"Item {itemId} not found.");
+            var findwithChild = null as ApiResponse<ItemResponseDto>;
+            if (response?.Data == null)
+            {
+                findwithChild = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}/parent");
+                if (findwithChild == null || findwithChild.Data == null)
+                    throw new KeyNotFoundException($"Item {itemId} not found.");
+            }
+
+            item = response?.Data ?? findwithChild?.Data ?? throw new KeyNotFoundException($"Item {itemId} not found.");
         }
         var reservedItemsAndPackages = await _rentalOrderMongoDbRepository.GetReservedQuantityAsync(item.Id, startDate, endDate);
 

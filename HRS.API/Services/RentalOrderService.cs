@@ -120,51 +120,51 @@ public class RentalOrderService : IRentalOrderService
         if (dto.Items is not null)
             foreach (var itemDto in dto.Items)
             {
+                var isChild = false;
                 var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemDto.ItemId}"); // Adjust the endpoint as necessary
-                var item = itemResponse?.Data;
-                if (item == null)
-                    throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
+                if (itemResponse?.Data == null)
+                {
+                    itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemDto.ItemId}/parent");
+                    isChild = true;
+                    if (itemResponse == null || itemResponse.Data == null)
+                        throw new KeyNotFoundException($"Item {itemDto.ItemId} not found.");
+                }
+                var item = itemResponse.Data;
                 var ParentId = item.ParentId;
                 var applicableRate = null as ItemRateResponseDto;
-                var parentResponse = null as ApiResponse<ItemResponseDto>;
-                if (ParentId != item.Id)
+
+                foreach (var dummyRate in item.Rates!)
                 {
-                    parentResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{ParentId}"); // Adjust the endpoint as necessary
-                    if (parentResponse == null || parentResponse.Data == null)
-                        throw new KeyNotFoundException($"Parent item {ParentId} not found.");
-
-
-                    foreach (var dummyRate in parentResponse.Data.Rates!)
+                    if (dummyRate.MinDays <= rentalDays)
                     {
-                        if (dummyRate.MinDays <= rentalDays)
-                        {
-                            applicableRate = dummyRate;
-                        }
-
+                        applicableRate = dummyRate;
                     }
 
+                }
+                var rate = applicableRate;
+                var dailyRate = rate?.DailyRate ?? item.Price;
+                var itemChild = item.Children?.Where(c => c.Id == itemDto.ItemId).FirstOrDefault();
+                if (isChild)
+                {
+                    entity.RentalOrderItems.Add(new Item
+                    {
+                        ItemId = itemDto.ItemId,
+                        ParentId = ParentId,
+                        ItemNameSnapshot = $"{item.Name}-{itemChild?.Name}",
+                        DailyRateSnapshot = dailyRate,
+                        Quantity = itemDto.Quantity,
+                    });
                 }
                 else
                 {
-                    foreach (var dummyRate in item.Rates!)
+                    entity.RentalOrderItems.Add(new Item
                     {
-                        if (dummyRate.MinDays <= rentalDays)
-                        {
-                            applicableRate = dummyRate;
-                        }
-
-                    }
+                        ItemId = item.Id,
+                        ItemNameSnapshot = item.Name,
+                        DailyRateSnapshot = dailyRate,
+                        Quantity = itemDto.Quantity
+                    });
                 }
-                var rate = applicableRate;
-                var dailyRate = rate?.DailyRate ?? parentResponse?.Data?.Price ?? item.Price;
-
-                entity.RentalOrderItems.Add(new Item
-                {
-                    ItemId = item.Id,
-                    ItemNameSnapshot = item.Name,
-                    DailyRateSnapshot = dailyRate,
-                    Quantity = itemDto.Quantity
-                });
 
                 totalAmount += dailyRate * itemDto.Quantity * rentalDays;
             }
@@ -506,6 +506,11 @@ public class RentalOrderService : IRentalOrderService
         {
             var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}"); // Adjust the endpoint as necessary
             item = itemResponse;
+            if (itemResponse?.Data == null)
+            {
+                itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{itemId}/parent");
+                item = itemResponse;
+            }
         }
 
 
@@ -517,19 +522,19 @@ public class RentalOrderService : IRentalOrderService
         var entities = new List<object>();
         if (repairQty > 0)
         {
-            entities.Add(new { ItemId = item.Data.Id, RentalOrderId = orderId, Type = 0, Quantity = repairQty, Remarks = "Auto-generated repair record on return" });
+            entities.Add(new { ItemId = itemId, RentalOrderId = orderId, Type = 0, Quantity = repairQty, Remarks = "Auto-generated repair record on return" });
         }
         // --- BROKEN ---
         if (damagedQty > 0)
         {
-            entities.Add(new { ItemId = item.Data.Id, RentalOrderId = orderId, Type = 3, Quantity = damagedQty, Remarks = "Auto-generated broken record on return" });
+            entities.Add(new { ItemId = itemId, RentalOrderId = orderId, Type = 3, Quantity = damagedQty, Remarks = "Auto-generated broken record on return" });
             item.Data.Quantity = Math.Max(0, item.Data.Quantity - damagedQty);
         }
 
         // --- LOST ---
         if (lostQty > 0)
         {
-            entities.Add(new { ItemId = item.Data.Id, RentalOrderId = orderId, Type = 2, Quantity = lostQty, Remarks = "Auto-generated lost record on return" });
+            entities.Add(new { ItemId = itemId, RentalOrderId = orderId, Type = 2, Quantity = lostQty, Remarks = "Auto-generated lost record on return" });
             item.Data.Quantity = Math.Max(0, item.Data.Quantity - lostQty);
         }
 
