@@ -39,9 +39,9 @@ public class AvailabilityService : IAvailabilityService
         }
         var reservedItemsAndPackages = await _rentalOrderMongoDbRepository.GetReservedQuantityAsync(item.Id, startDate, endDate);
 
-        var repairingResponse = await _itemMaintenanceClient.GetFromJsonAsync<ApiResponse<ItemMaintenanceResponseDto>>($"/api/item-maintenances/items/{item.Id}");
+        var repairingResponse = await _itemMaintenanceClient.GetFromJsonAsync<ApiResponse<int>>($"/api/item-maintenances/items/{item.Id}/repair/quantity");
 
-        var repairingQty = repairingResponse?.Data?.Quantity ?? 0;
+        var repairingQty = repairingResponse?.Data ?? 0;
 
         var totalReserved = reservedItemsAndPackages + repairingQty;
 

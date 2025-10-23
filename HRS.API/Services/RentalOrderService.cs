@@ -395,7 +395,7 @@ public class RentalOrderService : IRentalOrderService
             foreach (var itemCondition in dto.Items)
             {
                 var orderItem = order.RentalOrderItems
-                                    .FirstOrDefault(x => x.ItemId == itemCondition.RentalOrderItemId)
+                                    .FirstOrDefault(x => x.Id == itemCondition.RentalOrderItemId)
                                 ?? throw new KeyNotFoundException($"RentalOrderItem {itemCondition.RentalOrderItemId} not found.");
 
                 orderItem.SetReturnConditions(
@@ -547,7 +547,7 @@ public class RentalOrderService : IRentalOrderService
     {
         foreach (var itemDto in dto.Items ?? Enumerable.Empty<ReturnItemConditionDto>())
         {
-            var orderItem = order.RentalOrderItems.FirstOrDefault(x => x.ItemId == itemDto.RentalOrderItemId);
+            var orderItem = order.RentalOrderItems.FirstOrDefault(x => x.Id == itemDto.RentalOrderItemId);
             if (orderItem == null)
                 throw new InvalidOperationException($"Item with ID {itemDto.RentalOrderItemId} not found in this order.");
 

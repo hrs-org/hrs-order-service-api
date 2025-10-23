@@ -39,7 +39,7 @@ public class RentalOrderController : ControllerBase
     [Authorize(Roles = "Employee,Manager,Admin")]
     public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings()
     {
-        var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled, RentalStatus.PendingPayment };
+        var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled };
         var result = await _rentalOrderService.GetByStatusesAsync(bookingStatuses);
         return Ok(ApiResponse<List<RentalOrderResponseDto>>.OkResponse(result.ToList()));
     }
