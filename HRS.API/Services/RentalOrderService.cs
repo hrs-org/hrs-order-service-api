@@ -447,9 +447,7 @@ public class RentalOrderService : IRentalOrderService
         await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
 
         return _mapper.Map<RentalOrderResponseDto>(order);
-
     }
-
 
     public async Task<RentalOrderResponseDto> CloseAsync(string id)
     {
@@ -493,7 +491,8 @@ public class RentalOrderService : IRentalOrderService
             default:
                 return;
         }
-        var item = null as ApiResponse<ItemResponseDto>;
+
+        ApiResponse<ItemResponseDto>? item;
 
         if (repairQty + damagedQty + lostQty == 0)
             return; // nothing to do
@@ -512,8 +511,6 @@ public class RentalOrderService : IRentalOrderService
                 item = itemResponse;
             }
         }
-
-
 
         if (item == null || item.Data == null)
             return;

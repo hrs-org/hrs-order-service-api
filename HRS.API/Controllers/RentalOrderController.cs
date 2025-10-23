@@ -10,6 +10,7 @@ namespace HRS.API.Controllers;
 
 [ApiController]
 [Route("api/orders")]
+[Authorize]
 public class RentalOrderController : ControllerBase
 {
     private readonly IRentalOrderService _rentalOrderService;
@@ -20,7 +21,6 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [Authorize]
     public async Task<ActionResult<RentalOrderResponseDto>> GetById(string id)
     {
         var result = await _rentalOrderService.GetAsync(id);
@@ -63,7 +63,6 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPut("{id}/approve-payment")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
     public async Task<ActionResult<RentalOrderResponseDto>> ApprovePayment([FromBody] ApprovePaymentRequest request)
     {
         var id = request.SessionId;
@@ -113,7 +112,6 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPost("/api/orders/assign-stripe-sessionid/{orderId}")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
     public async Task<ActionResult<RentalOrderResponseDto>> AssignStripeSessionId([FromBody] AssignStripeSessionRequest request)
     {
         var id = request.OrderId;
