@@ -84,23 +84,23 @@ public class RentalOrderService : IRentalOrderService
                         $"Item '{itemDto.ItemId}' not available. Requested {itemDto.Quantity}, available {available}.");
             }
 
-        if (dto.Packages is not null)
-            foreach (var pkgDto in dto.Packages)
-            {
-                var pkgResponse = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
-                if (pkgResponse == null || pkgResponse.Data == null || pkgResponse.Data.Items == null)
-                    throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
-                var pkg = pkgResponse.Data;
-                foreach (var pi in pkg.Items)
-                {
-                    var required = pi.Quantity * pkgDto.Quantity;
-                    var available = await _availabilityService.GetAvailableQuantityAsync(pi.ItemId, dto.StartDate, dto.EndDate);
+        // if (dto.Packages is not null)
+        // foreach (var pkgDto in dto.Packages)
+        // {
+        //     var pkgResponse = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
+        //     if (pkgResponse == null || pkgResponse.Data == null || pkgResponse.Data.Items == null)
+        //         throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
+        //     var pkg = pkgResponse.Data;
+        //     foreach (var pi in pkg.Items)
+        //     {
+        //         var required = pi.Quantity * pkgDto.Quantity;
+        //         var available = await _availabilityService.GetAvailableQuantityAsync(pi.ItemId, dto.StartDate, dto.EndDate);
 
-                    if (available < required)
-                        throw new InvalidOperationException(
-                            $"Package '{pkg.Name}' unavailable — insufficient '{pi.ItemName}' (required {required}, available {available}).");
-                }
-            }
+        //         if (available < required)
+        //             throw new InvalidOperationException(
+        //                 $"Package '{pkg.Name}' unavailable — insufficient '{pi.ItemName}' (required {required}, available {available}).");
+        //     }
+        // }
 
         var entity = _mapper.Map<RentalOrderMongoDB>(dto);
         entity.CreatedById = user.Id;
@@ -169,62 +169,62 @@ public class RentalOrderService : IRentalOrderService
                 totalAmount += dailyRate * itemDto.Quantity * rentalDays;
             }
 
-        if (dto.Packages is not null)
-            foreach (var pkgDto in dto.Packages)
-            {
+        // if (dto.Packages is not null)
+        // foreach (var pkgDto in dto.Packages)
+        // {
 
-                var pkg = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
-                if (pkg == null || pkg.Data == null || pkg.Data.Items == null)
-                    throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
+        //     var pkg = await _itemClient.GetFromJsonAsync<ApiResponse<PackageResponseDto>>($"/api/packages/{pkgDto.PackageId}"); // Adjust the endpoint as necessary
+        //     if (pkg == null || pkg.Data == null || pkg.Data.Items == null)
+        //         throw new KeyNotFoundException($"Package {pkgDto.PackageId} not found.");
 
-                var rate = null as PackageRateResponseDto;
-                foreach (var dummyRate in pkg.Data.Rates!)
-                {
-                    if (dummyRate.MinDays <= rentalDays)
-                    {
-                        rate = dummyRate;
-                    }
+        //     var rate = null as PackageRateResponseDto;
+        //     foreach (var dummyRate in pkg.Data.Rates!)
+        //     {
+        //         if (dummyRate.MinDays <= rentalDays)
+        //         {
+        //             rate = dummyRate;
+        //         }
 
-                }
-                var dailyRate = rate?.DailyRate ?? pkg.Data.BasePrice;
+        //     }
+        //     var dailyRate = rate?.DailyRate ?? pkg.Data.BasePrice;
 
-                var rentalPkg = new Package
-                {
-                    PackageId = pkg.Data.Id,
-                    PackageNameSnapshot = pkg.Data.Name,
-                    DailyRateSnapshot = dailyRate,
-                    Quantity = pkgDto.Quantity
-                };
-                if (pkgDto.SelectedItems != null)
-                {
+        //     var rentalPkg = new Package
+        //     {
+        //         PackageId = pkg.Data.Id,
+        //         PackageNameSnapshot = pkg.Data.Name,
+        //         DailyRateSnapshot = dailyRate,
+        //         Quantity = pkgDto.Quantity
+        //     };
+        //     if (pkgDto.SelectedItems != null)
+        //     {
 
-                    foreach (var pi in pkgDto.SelectedItems)
-                    {
-                        var finalItem = null as ItemResponseDto;
-                        foreach (var pkgItemDto in pkg.Data.Items)
-                        {
+        //         foreach (var pi in pkgDto.SelectedItems)
+        //         {
+        //             var finalItem = null as ItemResponseDto;
+        //             foreach (var pkgItemDto in pkg.Data.Items)
+        //             {
 
-                            var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{pkgItemDto.ItemId}"); // Adjust the endpoint as necessary
-                            if (itemResponse == null || itemResponse.Data == null)
-                                throw new KeyNotFoundException($"Item {pkgItemDto.ItemId} not found.");
-                            var item = itemResponse.Data;
+        //                 var itemResponse = await _itemClient.GetFromJsonAsync<ApiResponse<ItemResponseDto>>($"/api/items/{pkgItemDto.ItemId}"); // Adjust the endpoint as necessary
+        //                 if (itemResponse == null || itemResponse.Data == null)
+        //                     throw new KeyNotFoundException($"Item {pkgItemDto.ItemId} not found.");
+        //                 var item = itemResponse.Data;
 
-                            finalItem = item?.Children?.FirstOrDefault(c => c.Id == pi.SelectedItemId);
-                            if (finalItem != null)
-                                rentalPkg.PackageItems.Add(new PackageItem
-                                {
-                                    ItemId = finalItem.Id,
-                                    ItemNameSnapshot = finalItem.Name,
-                                    QuantityPerPackageSnapshot = pkgDto.Quantity
-                                }
-                            );
-                        }
-                    }
-                }
+        //                 finalItem = item?.Children?.FirstOrDefault(c => c.Id == pi.SelectedItemId);
+        //                 if (finalItem != null)
+        //                     rentalPkg.PackageItems.Add(new PackageItem
+        //                     {
+        //                         ItemId = finalItem.Id,
+        //                         ItemNameSnapshot = finalItem.Name,
+        //                         QuantityPerPackageSnapshot = pkgDto.Quantity
+        //                     }
+        //                 );
+        //             }
+        //         }
+        //     }
 
-                entity.RentalOrderPackages.Add(rentalPkg);
-                totalAmount += dailyRate * (pkgDto?.Quantity ?? 1) * rentalDays;
-            }
+        //     entity.RentalOrderPackages.Add(rentalPkg);
+        //     totalAmount += dailyRate * (pkgDto?.Quantity ?? 1) * rentalDays;
+        // }
 
 
         entity.TotalAmount = totalAmount;
