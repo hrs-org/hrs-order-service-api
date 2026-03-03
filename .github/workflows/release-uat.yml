@@ -98,15 +98,15 @@ jobs:
                   # Replace placeholders in the deployment file
                   sed "s|__ACR_NAME__|${{ secrets.ACR_NAME }}|g" k8s/deployment-uat.yaml | \
                   sed "s|__IMAGE_TAG__|${{ github.event.inputs.version }}|g" | \
-                  sed "s|__MONGODB_CONNECTION_STRING__|${{ secrets.MONGODB_CONNECTION_STRING || 'mongodb://admin:password@mongodb.orders.svc.cluster.local:27017' }}|g" | \
+                  sed "s|__MONGODB_CONNECTION_STRING__|${{ secrets.MONGODB_CONNECTION_STRING || 'mongodb://admin:password@mongodb-order.uat.svc.cluster.local:27017' }}|g" | \
                   sed "s|__MONGODB_DATABASE_NAME__|${{ secrets.MONGODB_DATABASE_NAME || 'hrsdb-order' }}|g" | \
                   sed "s|__JWT_ISSUER__|${{ secrets.JWT_ISSUER || 'HRSApp' }}|g" | \
                   sed "s|__JWT_AUDIENCE__|${{ secrets.JWT_AUDIENCE || 'HRSUsers' }}|g" | \
                   sed "s|__JWT_SECRET_KEY__|${{ secrets.JWT_SECRET_KEY }}|g" | \
                   sed "s|__ALLOWED_ORIGINS__|${{ secrets.ALLOWED_ORIGINS || 'http://localhost:4200' }}|g" | \
-                  sed "s|__ITEM_MAINTENANCE_SERVICE__|${{ secrets.ITEM_MAINTENANCE_SERVICE || 'http://hrs-maintenance-service.maintenance.svc.cluster.local' }}|g" | \
-                  sed "s|__PAYMENT_SERVICE__|${{ secrets.PAYMENT_SERVICE || 'http://hrs-payment-service.payments.svc.cluster.local' }}|g" | \
-                  sed "s|__ITEM_SERVICE__|${{ secrets.ITEM_SERVICE || 'http://hrs-inventory-service.inventory.svc.cluster.local' }}|g" \
+                  sed "s|__ITEM_MAINTENANCE_SERVICE__|${{ secrets.ITEM_MAINTENANCE_SERVICE || 'http://hrs-maintenance-service.uat.svc.cluster.local' }}|g" | \
+                  sed "s|__PAYMENT_SERVICE__|${{ secrets.PAYMENT_SERVICE || 'http://hrs-payment-service.uat.svc.cluster.local' }}|g" | \
+                  sed "s|__ITEM_SERVICE__|${{ secrets.ITEM_SERVICE || 'http://hrs-inventory-service.uat.svc.cluster.local' }}|g" \
                   > k8s/deployment-final.yaml
 
                   # Show the final manifest for debugging (mask sensitive values)

@@ -1,26 +1,21 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-    name: orders
----
-apiVersion: v1
 kind: Secret
 metadata:
-    name: mongodb-secret
-    namespace: orders
+    name: mongodb-order-secret
+    namespace: uat
 type: Opaque
 stringData:
     mongodb-root-username: admin
     mongodb-root-password: 38EBD2537A6D4194958B4E83fd1D6!
-    mongodb-connection-string: mongodb://admin:38EBD2537A6D4194958B4E83fd1D6!@mongodb.orders.svc.cluster.local:27017
+    mongodb-connection-string: mongodb://admin:38EBD2537A6D4194958B4E83fd1D6!@mongodb-order.uat.svc.cluster.local:27017
 ---
 apiVersion: v1
 kind: Service
 metadata:
-    name: mongodb
-    namespace: orders
+    name: mongodb-order
+    namespace: uat
     labels:
-        app: mongodb
+        app: mongodb-order
 spec:
     ports:
         - port: 27017
@@ -28,23 +23,23 @@ spec:
           name: mongodb
     clusterIP: None
     selector:
-        app: mongodb
+        app: mongodb-order
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-    name: mongodb
-    namespace: orders
+    name: mongodb-order
+    namespace: uat
 spec:
-    serviceName: mongodb
+    serviceName: mongodb-order
     replicas: 1
     selector:
         matchLabels:
-            app: mongodb
+            app: mongodb-order
     template:
         metadata:
             labels:
-                app: mongodb
+                app: mongodb-order
         spec:
             containers:
                 - name: mongodb
@@ -56,12 +51,12 @@ spec:
                       - name: MONGO_INITDB_ROOT_USERNAME
                         valueFrom:
                             secretKeyRef:
-                                name: mongodb-secret
+                                name: mongodb-order-secret
                                 key: mongodb-root-username
                       - name: MONGO_INITDB_ROOT_PASSWORD
                         valueFrom:
                             secretKeyRef:
-                                name: mongodb-secret
+                                name: mongodb-order-secret
                                 key: mongodb-root-password
                   volumeMounts:
                       - name: mongodb-data
@@ -74,23 +69,19 @@ spec:
                           memory: "512Mi"
                           cpu: "500m"
                   livenessProbe:
-                      exec:
-                          command:
-                              - mongosh
-                              - --eval
-                              - "db.adminCommand('ping')"
+                      tcpSocket:
+                          port: 27017
                       initialDelaySeconds: 30
                       periodSeconds: 10
                       timeoutSeconds: 5
+                      failureThreshold: 6
                   readinessProbe:
-                      exec:
-                          command:
-                              - mongosh
-                              - --eval
-                              - "db.adminCommand('ping')"
+                      tcpSocket:
+                          port: 27017
                       initialDelaySeconds: 15
                       periodSeconds: 5
                       timeoutSeconds: 3
+                      failureThreshold: 3
     volumeClaimTemplates:
         - metadata:
               name: mongodb-data

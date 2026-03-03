@@ -7,7 +7,16 @@ EXPOSE 80
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 ARG GITHUB_TOKEN
+ARG USE_LOCAL_NUGET=false
 WORKDIR /app
+
+# Copy local NuGet packages if available (for local development)
+COPY [".nuget-local/", "./.nuget-local/"]
+
+# Configure local NuGet source first (for local development)
+RUN if [ -d ".nuget-local" ] && [ "$(ls -A .nuget-local)" ]; then \
+    dotnet nuget add source /app/.nuget-local --name local; \
+    fi
 
 # Configure GitHub Packages authentication if token is provided
 RUN if [ ! -z "$GITHUB_TOKEN" ]; then \

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
     name: hrs-order-service
-    namespace: orders
+    namespace: uat
     labels:
         app: hrs-order-service
 spec:
@@ -79,7 +79,7 @@ apiVersion: v1
 kind: Service
 metadata:
     name: hrs-order-service
-    namespace: orders
+    namespace: uat
     labels:
         app: hrs-order-service
 spec:
