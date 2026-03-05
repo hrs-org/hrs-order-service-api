@@ -1,11 +1,10 @@
-# syntax=docker/dockerfile:1.7
-# Use the official .NET runtime as base image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+# Use Alpine-based runtime (smaller, fewer vulnerabilities)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 WORKDIR /app
 EXPOSE 80
 
-# Use the SDK image to build the app
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# Use Alpine SDK for build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 ARG BUILD_CONFIGURATION=Release
 ARG USE_LOCAL_NUGET=false
 WORKDIR /app
@@ -58,8 +57,8 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Create a non-root user
-RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
+# Create non-root user with high UID
+RUN adduser --disabled-password --gecos '' --uid 10004 appuser && chown -R appuser /app
 USER appuser
 
 # Set environment variable to listen on port 8080 (non-privileged port)
