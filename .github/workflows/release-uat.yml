@@ -124,9 +124,9 @@ jobs:
                   JWT_AUDIENCE: "${{ secrets.JWT_AUDIENCE || 'HRSUsers' }}"
                   JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
                   ALLOWED_ORIGINS: "${{ secrets.ALLOWED_ORIGINS || 'http://localhost:4200' }}"
-                  ITEM_MAINTENANCE_SERVICE: "${{ secrets.ITEM_MAINTENANCE_SERVICE || 'http://hrs-maintenance-service.uat.svc.cluster.local' }}"
-                  PAYMENT_SERVICE: "${{ secrets.PAYMENT_SERVICE || 'http://hrs-payment-service.uat.svc.cluster.local' }}"
-                  ITEM_SERVICE: "${{ secrets.ITEM_SERVICE || 'http://hrs-inventory-service.uat.svc.cluster.local' }}"
+                  ITEM_MAINTENANCE_SERVICE: "${{ secrets.ITEM_MAINTENANCE_SERVICE  }}"
+                  PAYMENT_SERVICE: "${{ secrets.PAYMENT_SERVICE }}"
+                  ITEM_SERVICE: "${{ secrets.ITEM_SERVICE  }}"
               run: |
                   echo "Preparing deployment manifests with GitHub secrets..."
 
