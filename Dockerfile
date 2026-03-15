@@ -12,7 +12,8 @@ WORKDIR /app
 
 # Optionally use a local NuGet feed when explicitly enabled for local builds.
 RUN --mount=type=bind,source=.,target=/context,readonly \
-    if [ "$USE_LOCAL_NUGET" = "true" ] && [ -d "/context/.nuget-local" ] && [ "$(ls -A /context/.nuget-local 2>/dev/null)" ]; then \
+    if [ "$USE_LOCAL_NUGET" = "true" ] && [ -d "/context/.nuget-local" ] && \
+    [ "$(ls -A /context/.nuget-local 2>/dev/null)" ]; then \
     cp -a /context/.nuget-local /app/.nuget-local && \
     dotnet nuget add source /app/.nuget-local --name local; \
     fi

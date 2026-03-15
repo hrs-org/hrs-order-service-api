@@ -7,14 +7,6 @@ name: HRS Order Service CI/CD
         tags:
             - "v*.*.*"
 
-permissions:
-    contents: read
-    actions: read
-    security-events: write
-    pull-requests: write
-    checks: write
-    packages: read
-
 env:
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     DOTNET_NOLOGO: true
@@ -23,6 +15,10 @@ jobs:
     build:
         name: Build
         runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: read
+            actions: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -78,6 +74,12 @@ jobs:
         name: Code Quality Analysis (SAST)
         runs-on: ubuntu-latest
         needs: build
+        permissions:
+            contents: read
+            packages: read
+            actions: read
+            pull-requests: write
+            checks: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -149,6 +151,9 @@ jobs:
         name: Lint
         runs-on: ubuntu-latest
         needs: build
+        permissions:
+            contents: read
+            packages: read
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -179,6 +184,11 @@ jobs:
         name: Security Scan
         runs-on: ubuntu-latest
         needs: build
+        permissions:
+            contents: read
+            packages: read
+            actions: write
+            security-events: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -219,6 +229,10 @@ jobs:
         needs: [build, code-quality, lint, security-scan]
         if: github.event_name == 'push'
         environment: uat
+        permissions:
+            contents: read
+            packages: read
+            actions: write
         outputs:
             version: ${{ steps.version.outputs.version }}
             image-tag: ${{ steps.version.outputs.image-tag }}
@@ -313,6 +327,9 @@ jobs:
         needs: docker-build
         if: github.event_name == 'push'
         environment: uat
+        permissions:
+            contents: read
+            actions: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
