@@ -1,6 +1,6 @@
 name: Release UAT to AKS
 
-on:
+"on":
     workflow_dispatch:
         inputs:
             version:
@@ -16,15 +16,10 @@ on:
                 options:
                     - uat
 
-permissions:
-    contents: read
-    actions: read
-    id-token: write
-
 env:
     AZURE_RESOURCE_GROUP: rg-hrsm-uat
     AKS_CLUSTER_NAME: hrsm-uat-aks
-    NAMESPACE: orders
+    NAMESPACE: uat
     DEPLOYMENT_NAME: hrs-order-service
     SERVICE_NAME: hrs-order-service
 
@@ -33,6 +28,8 @@ jobs:
         name: Deploy to AKS ${{ github.event.inputs.environment }}
         runs-on: ubuntu-latest
         environment: ${{ github.event.inputs.environment }}
+        permissions:
+            contents: read
 
         steps:
             - name: Checkout code
@@ -60,58 +57,114 @@ jobs:
                   kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
             - name: Attach ACR to AKS (if not already attached)
+              env:
+                  ACR_NAME: ${{ secrets.ACR_NAME }}
               run: |
                   az aks update \
                     --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
                     --name ${{ env.AKS_CLUSTER_NAME }} \
-                    --attach-acr ${{ secrets.ACR_NAME }} || echo "ACR already attached or unable to attach"
+                    --attach-acr "$ACR_NAME" || echo "ACR already attached or unable to attach"
 
             - name: Verify image exists in ACR
+              env:
+                  ACR_NAME: ${{ secrets.ACR_NAME }}
+                  IMAGE_TAG: ${{ github.event.inputs.version }}
               run: |
                   echo "🔍 Verifying image exists in ACR..."
 
                   # List all available tags
                   echo "Available tags:"
                   az acr repository show-tags \
-                    --name ${{ secrets.ACR_NAME }} \
+                    --name "$ACR_NAME" \
                     --repository hrs-order-service \
                     --orderby time_desc \
                     --output table
 
                   # Check if specific tag exists
                   if az acr repository show-tags \
-                      --name ${{ secrets.ACR_NAME }} \
+                      --name "$ACR_NAME" \
                       --repository hrs-order-service \
-                      --output tsv | grep -q "^${{ github.event.inputs.version }}$"; then
-                    echo "✅ Image tag '${{ github.event.inputs.version }}' found in ACR"
+                      --output tsv | grep -Fxq "$IMAGE_TAG"; then
+                    echo "✅ Image tag '${IMAGE_TAG}' found in ACR"
                   else
-                    echo "❌ Image tag '${{ github.event.inputs.version }}' not found in ACR"
+                    echo "❌ Image tag '${IMAGE_TAG}' not found in ACR"
                     echo ""
                     echo "Please use one of the available tags listed above or build the image first."
                     exit 1
                   fi
 
-            - name: Prepare deployment manifest
+            - name: Validate deployment secrets
+              env:
+                  MONGODB_ROOT_PASSWORD: ${{ secrets.MONGODB_ROOT_PASSWORD }}
+                  MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
+                  JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
               run: |
-                  echo "Preparing deployment manifest with secrets..."
+                  missing=0
+
+                  for name in MONGODB_ROOT_PASSWORD MONGODB_CONNECTION_STRING JWT_SECRET_KEY; do
+                    if [ -z "${!name}" ]; then
+                      echo "❌ Missing required GitHub secret: $name"
+                      missing=1
+                    fi
+                  done
+
+                  if [ "$missing" -ne 0 ]; then
+                    exit 1
+                  fi
+
+            - name: Prepare deployment manifests
+              env:
+                  IMAGE_TAG: ${{ github.event.inputs.version }}
+                  MONGODB_ROOT_USERNAME: "${{ secrets.MONGODB_ROOT_USERNAME || 'admin' }}"
+                  MONGODB_ROOT_PASSWORD: ${{ secrets.MONGODB_ROOT_PASSWORD }}
+                  MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
+                  MONGODB_DATABASE_NAME: "${{ secrets.MONGODB_DATABASE_NAME || 'hrsdb-order' }}"
+                  ACR_NAME: ${{ secrets.ACR_NAME }}
+                  JWT_ISSUER: "${{ secrets.JWT_ISSUER || 'HRSApp' }}"
+                  JWT_AUDIENCE: "${{ secrets.JWT_AUDIENCE || 'HRSUsers' }}"
+                  JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+                  ALLOWED_ORIGINS: "${{ secrets.ALLOWED_ORIGINS || 'http://localhost:4200' }}"
+                  ITEM_MAINTENANCE_SERVICE: "${{ secrets.ITEM_MAINTENANCE_SERVICE  }}"
+                  PAYMENT_SERVICE: "${{ secrets.PAYMENT_SERVICE }}"
+                  ITEM_SERVICE: "${{ secrets.ITEM_SERVICE  }}"
+              run: |
+                  echo "Preparing deployment manifests with GitHub secrets..."
+
+                  sed "s|__MONGODB_ROOT_USERNAME__|$MONGODB_ROOT_USERNAME|g" k8s/mongodb-statefulset.yaml | \
+                  sed "s|__MONGODB_ROOT_PASSWORD__|$MONGODB_ROOT_PASSWORD|g" | \
+                  sed "s|__MONGODB_CONNECTION_STRING__|$MONGODB_CONNECTION_STRING|g" \
+                  > k8s/mongodb-statefulset-final.yaml
 
                   # Replace placeholders in the deployment file
-                  sed "s|__ACR_NAME__|${{ secrets.ACR_NAME }}|g" k8s/deployment-uat.yaml | \
-                  sed "s|__IMAGE_TAG__|${{ github.event.inputs.version }}|g" | \
-                  sed "s|__MONGODB_CONNECTION_STRING__|${{ secrets.MONGODB_CONNECTION_STRING || 'mongodb://admin:password@mongodb-order.uat.svc.cluster.local:27017' }}|g" | \
-                  sed "s|__MONGODB_DATABASE_NAME__|${{ secrets.MONGODB_DATABASE_NAME || 'hrsdb-order' }}|g" | \
-                  sed "s|__JWT_ISSUER__|${{ secrets.JWT_ISSUER || 'HRSApp' }}|g" | \
-                  sed "s|__JWT_AUDIENCE__|${{ secrets.JWT_AUDIENCE || 'HRSUsers' }}|g" | \
-                  sed "s|__JWT_SECRET_KEY__|${{ secrets.JWT_SECRET_KEY }}|g" | \
-                  sed "s|__ALLOWED_ORIGINS__|${{ secrets.ALLOWED_ORIGINS || 'http://localhost:4200' }}|g" | \
-                  sed "s|__ITEM_MAINTENANCE_SERVICE__|${{ secrets.ITEM_MAINTENANCE_SERVICE || 'http://hrs-maintenance-service.uat.svc.cluster.local' }}|g" | \
-                  sed "s|__PAYMENT_SERVICE__|${{ secrets.PAYMENT_SERVICE || 'http://hrs-payment-service.uat.svc.cluster.local' }}|g" | \
-                  sed "s|__ITEM_SERVICE__|${{ secrets.ITEM_SERVICE || 'http://hrs-inventory-service.uat.svc.cluster.local' }}|g" \
+                  sed "s|__ACR_NAME__|$ACR_NAME|g" k8s/deployment-uat.yaml | \
+                  sed "s|__IMAGE_TAG__|$IMAGE_TAG|g" | \
+                  sed "s|__MONGODB_CONNECTION_STRING__|$MONGODB_CONNECTION_STRING|g" | \
+                  sed "s|__MONGODB_DATABASE_NAME__|$MONGODB_DATABASE_NAME|g" | \
+                  sed "s|__JWT_ISSUER__|$JWT_ISSUER|g" | \
+                  sed "s|__JWT_AUDIENCE__|$JWT_AUDIENCE|g" | \
+                  sed "s|__JWT_SECRET_KEY__|$JWT_SECRET_KEY|g" | \
+                  sed "s|__ALLOWED_ORIGINS__|$ALLOWED_ORIGINS|g" | \
+                  sed "s|__ITEM_MAINTENANCE_SERVICE__|$ITEM_MAINTENANCE_SERVICE|g" | \
+                  sed "s|__PAYMENT_SERVICE__|$PAYMENT_SERVICE|g" | \
+                  sed "s|__ITEM_SERVICE__|$ITEM_SERVICE|g" \
                   > k8s/deployment-final.yaml
 
-                  # Show the final manifest for debugging (mask sensitive values)
                   echo "=== Final Deployment Manifest (sensitive values masked) ==="
                   cat k8s/deployment-final.yaml | grep -v "MONGODB_CONNECTION_STRING" | grep -v "JWT_SECRET_KEY" || cat k8s/deployment-final.yaml
+
+                  echo "=== Final MongoDB Manifest (sensitive values masked) ==="
+                  cat k8s/mongodb-statefulset-final.yaml | grep -v "mongodb-root-password" | grep -v "mongodb-connection-string" || cat k8s/mongodb-statefulset-final.yaml
+
+            - name: Ensure MongoDB exists
+              run: |
+                  echo "Checking MongoDB resources..."
+
+                  if kubectl get secret/mongodb-order-secret service/mongodb-order statefulset.apps/mongodb-order -n ${{ env.NAMESPACE }} >/dev/null 2>&1; then
+                    echo "MongoDB resources already exist. Skipping MongoDB apply."
+                  else
+                    echo "MongoDB resources are missing. Creating MongoDB resources..."
+                    kubectl apply -f k8s/mongodb-statefulset-final.yaml
+                  fi
 
             - name: Deploy to AKS
               run: |
@@ -235,6 +288,7 @@ jobs:
         needs: deploy-to-aks
         if: failure()
         environment: ${{ github.event.inputs.environment }}
+        permissions: {}
         steps:
             - name: Set up Azure CLI
               uses: azure/login@v1
