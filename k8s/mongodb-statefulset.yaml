@@ -5,9 +5,9 @@ metadata:
     namespace: uat
 type: Opaque
 stringData:
-    mongodb-root-username: admin
-    mongodb-root-password: 38EBD2537A6D4194958B4E83fd1D6!
-    mongodb-connection-string: mongodb://admin:38EBD2537A6D4194958B4E83fd1D6!@mongodb-order.uat.svc.cluster.local:27017
+    mongodb-root-username: __MONGODB_ROOT_USERNAME__
+    mongodb-root-password: __MONGODB_ROOT_PASSWORD__
+    mongodb-connection-string: __MONGODB_CONNECTION_STRING__
 ---
 apiVersion: v1
 kind: Service
