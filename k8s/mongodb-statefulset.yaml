@@ -41,6 +41,13 @@ spec:
             labels:
                 app: mongodb-order
         spec:
+            # SNYK-CC-K8S-6: Add security context at pod level
+            securityContext:
+                runAsUser: 10999 # MongoDB user (high UID to avoid host clash)
+                runAsGroup: 10999 # MongoDB group
+                fsGroup: 10999 # MongoDB group
+                seccompProfile:
+                    type: RuntimeDefault
             containers:
                 - name: mongodb
                   image: mongo:7.0
@@ -58,6 +65,19 @@ spec:
                             secretKeyRef:
                                 name: mongodb-order-secret
                                 key: mongodb-root-password
+                  # SNYK-CC-K8S-9, 8, 42: Add container security context (databases need some capabilities)
+                  securityContext:
+                      allowPrivilegeEscalation: false # SNYK-CC-K8S-8
+                      privileged: false # SNYK-CC-K8S-9
+                      runAsNonRoot: true # SNYK-CC-K8S-10
+                      capabilities:
+                          drop:
+                              - NET_RAW # SNYK-CC-K8S-41
+                              - ALL # Drop all then add back needed ones
+                          add:
+                              - CHOWN # File ownership changes
+                              - SETGID # Required for MongoDB
+                              - SETUID # Required for MongoDB
                   volumeMounts:
                       - name: mongodb-data
                         mountPath: /data/db
@@ -65,9 +85,11 @@ spec:
                       requests:
                           memory: "256Mi"
                           cpu: "250m"
+                          ephemeral-storage: "2Gi"
                       limits:
                           memory: "512Mi"
                           cpu: "500m"
+                          ephemeral-storage: "5Gi"
                   livenessProbe:
                       tcpSocket:
                           port: 27017

@@ -15,6 +15,13 @@ spec:
             labels:
                 app: hrs-order-service
         spec:
+            # SNYK-CC-K8S-6: Add security context at pod level
+            securityContext:
+                runAsNonRoot: true
+                runAsUser: 10004 # High UID to avoid host conflicts
+                fsGroup: 10004
+                seccompProfile:
+                    type: RuntimeDefault
             containers:
                 - name: hrs-order-service
                   image: __ACR_NAME__.azurecr.io/hrs-order-service:__IMAGE_TAG__
@@ -49,13 +56,30 @@ spec:
                         value: "__PAYMENT_SERVICE__"
                       - name: ItemService
                         value: "__ITEM_SERVICE__"
+                  # SNYK-CC-K8S-9, 10, 11, 8, 42: Add container security context
+                  securityContext:
+                      allowPrivilegeEscalation: false # SNYK-CC-K8S-8
+                      privileged: false # SNYK-CC-K8S-9
+                      runAsNonRoot: true # SNYK-CC-K8S-10
+                      runAsUser: 10004 # SNYK-CC-K8S-10 (high UID)
+                      readOnlyRootFilesystem: true # SNYK-CC-K8S-6
+                      capabilities:
+                          drop:
+                              - ALL # SNYK-CC-K8S-11, 42
+                  volumeMounts:
+                      - name: tmp
+                        mountPath: /tmp
+                      - name: aspnet-tmp
+                        mountPath: /app/.aspnet
                   resources:
                       requests:
                           memory: "128Mi"
                           cpu: "100m"
+                          ephemeral-storage: "512Mi"
                       limits:
                           memory: "256Mi"
                           cpu: "250m"
+                          ephemeral-storage: "1Gi"
                   livenessProbe:
                       httpGet:
                           path: /health
@@ -72,6 +96,13 @@ spec:
                       periodSeconds: 5
                       timeoutSeconds: 3
                       failureThreshold: 2
+            volumes:
+                - name: tmp
+                  emptyDir:
+                      sizeLimit: "256Mi"
+                - name: aspnet-tmp
+                  emptyDir:
+                      sizeLimit: "256Mi"
             imagePullSecrets:
                 - name: acr-secret
 ---
