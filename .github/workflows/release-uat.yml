@@ -56,6 +56,10 @@ jobs:
               run: |
                   kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
+            - name: Label namespace for Istio sidecar injection
+              run: |
+                  kubectl label namespace ${{ env.NAMESPACE }} istio-injection=enabled --overwrite
+
             - name: Attach ACR to AKS (if not already attached)
               env:
                   ACR_NAME: ${{ secrets.ACR_NAME }}
