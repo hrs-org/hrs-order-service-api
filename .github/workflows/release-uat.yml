@@ -358,10 +358,12 @@ jobs:
                     --timeout=300s
 
             - name: Check order API health
+              env:
+                  BASE_URL: ${{ secrets.UAT_API_ENDPOINT }}
               run: |
                   set -euo pipefail
 
-                  BASE_URL="${{ secrets.UAT_API_ENDPOINT }}"
+                  BASE_URL="${BASE_URL%/}"
                   if [ -z "$BASE_URL" ]; then
                     echo "UAT_API_ENDPOINT secret is not set"
                     exit 1
@@ -414,6 +416,8 @@ jobs:
 
             - name: Post integration summary
               if: always()
+              env:
+                  BASE_URL: ${{ secrets.UAT_API_ENDPOINT }}
               run: |
                   echo "## 🧪 Integration Test Summary" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
@@ -422,7 +426,7 @@ jobs:
                   echo "| **Service** | Order Service |" >> $GITHUB_STEP_SUMMARY
                   echo "| **Environment** | \`${{ github.event.inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
                   echo "| **Namespace** | \`${{ env.NAMESPACE }}\` |" >> $GITHUB_STEP_SUMMARY
-                  echo "| **Endpoint** | \`${{ secrets.UAT_API_ENDPOINT }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Endpoint** | \`${BASE_URL%/}\` |" >> $GITHUB_STEP_SUMMARY
                   echo "| **Checks** | API health + MongoDB readiness + MongoDB ping |" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
 
