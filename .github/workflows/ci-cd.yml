@@ -55,11 +55,11 @@ jobs:
               run: |
                   dotnet-coverage collect "dotnet test HRS.Test/HRS.Test.csproj --configuration Release --no-build --verbosity normal" \
                     -f xml -o "./coverage/coverage.xml"
-                    
+
                   dotnet test HRS.Test/HRS.Test.csproj --configuration Release --no-build \
                     --logger "trx;LogFileName=TestResults.trx" \
                     --results-directory ./coverage
-                    
+
                   ls -la ./coverage/
 
             - name: Upload test results
@@ -181,7 +181,7 @@ jobs:
               run: dotnet format HikingRentalStore.sln --verify-no-changes --verbosity diagnostic
 
     security-scan:
-        name: Security Scan
+        name: Security Scan - Software Composition Analysis (SCA)
         runs-on: ubuntu-latest
         needs: build
         permissions:
@@ -213,7 +213,9 @@ jobs:
               run: dotnet restore HikingRentalStore.sln
 
             - name: Security audit
-              run: dotnet list HikingRentalStore.sln package --vulnerable --include-transitive > security-audit.txt 2>&1 || true
+              run: |
+                  dotnet list HRS.Gateway/HRS.Gateway.csproj package --vulnerable --include-transitive | tee security-audit.txt
+                  if grep -q "Severity: High" security-audit.txt; then exit 1; fi
 
             - name: Upload security scan results
               uses: actions/upload-artifact@v4
@@ -222,6 +224,61 @@ jobs:
                   name: security-scan-results
                   path: security-audit.txt
                   retention-days: 7
+
+    secret-scan:
+        name: Scan for Secrets
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Run Gitleaks Scan
+              uses: gitleaks/gitleaks-action@v2
+              with:
+                  args: detect --source . --verbose --redact --exit-code 1
+
+    Container-Security-Scan:
+        name: Run Trivy Scan- Container Security Scan
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Run Trivy FS Scan
+              uses: aquasecurity/trivy-action@v0.20.0
+              with:
+                  scan-type: "fs"
+                  scan-ref: "."
+                  format: "table"
+                  exit-code: "1" # ❗ fail pipeline if vulnerabilities found
+                  severity: "CRITICAL,HIGH"
+                  ignore-unfixed: true
+
+            - name: Build Docker Image
+              run: docker build -t my-app:latest .
+
+            - name: Run Trivy Image Scan
+              uses: aquasecurity/trivy-action@v0.20.0
+              with:
+                  image-ref: "my-app:latest"
+                  format: "table"
+                  exit-code: "1"
+                  severity: "CRITICAL,HIGH"
+                  ignore-unfixed: true
+
+            - name: Generate SARIF Report
+              uses: aquasecurity/trivy-action@v0.20.0
+              with:
+                  scan-type: "fs"
+                  scan-ref: "."
+                  format: "sarif"
+                  output: "trivy-results.sarif"
+
+            - name: Upload SARIF to GitHub Security
+              uses: github/codeql-action/upload-sarif@v3
+              with:
+                  sarif_file: "trivy-results.sarif"
 
     docker-build:
         name: Build & Push Docker Image to ACR
