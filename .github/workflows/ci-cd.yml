@@ -265,6 +265,9 @@ jobs:
     Container-Security-Scan:
         name: Run Trivy Scan- Container Security Scan
         runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            security-events: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -303,7 +306,9 @@ jobs:
                   output: "trivy-results.sarif"
 
             - name: Upload SARIF to GitHub Security
-              uses: github/codeql-action/upload-sarif@v3
+              # Forked PRs do not get a token with security-events write permission.
+              if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+              uses: github/codeql-action/upload-sarif@v4
               with:
                   sarif_file: "trivy-results.sarif"
 
