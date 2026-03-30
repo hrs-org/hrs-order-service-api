@@ -89,7 +89,7 @@ public class AssignStripeSessionRequest
 public class ApprovePaymentRequest
 {
     public string SessionId { get; set; } = string.Empty;
-    public int? Amount { get; set; }
+    public long? Amount { get; set; }
 }
 
 public class UpdateItemRequestDto

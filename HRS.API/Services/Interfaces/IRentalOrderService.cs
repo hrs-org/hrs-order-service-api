@@ -13,7 +13,7 @@ public interface IRentalOrderService
     Task<RentalOrderResponseDto> ApproveAsync(string id);
     Task<RentalOrderResponseDto> CancelAsync(string id);
     Task AssignStripeSessionIdAsync(string orderId, string sessionId);
-    Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, int? amount);
+    Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, long? amount);
     Task<RentalOrderResponseDto> MarkAsRentedAsync(string id);
     Task<RentalOrderResponseDto> ReturnAsync(string id, ReturnRentalOrderRequestDto dto);
     Task<RentalOrderResponseDto> CloseAsync(string id);

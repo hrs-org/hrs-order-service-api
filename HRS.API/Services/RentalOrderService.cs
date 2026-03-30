@@ -268,12 +268,16 @@ public class RentalOrderService : IRentalOrderService
         await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
     }
 
-    public async Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, int? amount)
+    public async Task<RentalOrderResponseDto> ApprovePaymentAsync(string sessionId, long? amount)
     {
         var user = await _userContextService.GetUserAsync();
 
         var order = await _rentalOrderMongoDBRepository.GetByStripeSessionIdAsync(sessionId)
                     ?? throw new KeyNotFoundException(OrderNotFound);
+
+        var expectedMinor = (long)Math.Round(order.TotalAmount * 100m, 0, MidpointRounding.AwayFromZero);
+        if (!amount.HasValue || amount.Value != expectedMinor)
+            throw new InvalidOperationException("Payment amount does not match order total.");
 
         var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
         var existingPayments = response?.Data;

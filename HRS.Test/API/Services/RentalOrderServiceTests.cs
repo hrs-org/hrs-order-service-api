@@ -339,10 +339,19 @@ public class RentalOrderServiceTests
     }
 
     [Fact]
+    public async Task ApprovePaymentAsync_AmountMismatch_Throws()
+    {
+        var order = new RentalOrderMongoDB { Id = "ap-mis", StoreId = 1, Status = RentalStatus.PendingPayment, TotalAmount = 5.00m };
+        _repo.GetByStripeSessionIdAsync("sess-mis").Returns(order);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.ApprovePaymentAsync("sess-mis", 100));
+    }
+
+    [Fact]
     public async Task ApprovePaymentAsync_ExistingPayment_ThrowsDuplicate()
     {
         // arrange
-        var order = new RentalOrderMongoDB { Id = "o-pay-1", StoreId = 1, Status = RentalStatus.PendingPayment };
+        var order = new RentalOrderMongoDB { Id = "o-pay-1", StoreId = 1, Status = RentalStatus.PendingPayment, TotalAmount = 2.00m };
         _repo.GetByStripeSessionIdAsync("sess-exists").Returns(order);
 
         // configure payment GET to return data (existing payments)
@@ -548,7 +557,7 @@ public class RentalOrderServiceTests
     public async Task ApprovePaymentAsync_PostFails_Throws()
     {
         // arrange
-        var order = new RentalOrderMongoDB { Id = "ap1", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.POS };
+        var order = new RentalOrderMongoDB { Id = "ap1", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.POS, TotalAmount = 1.00m };
         _repo.GetByStripeSessionIdAsync("sess-ap-fail").Returns(order);
 
         // payment client: GET returns Data = null, POST returns 500
@@ -568,7 +577,7 @@ public class RentalOrderServiceTests
     public async Task ApprovePaymentAsync_Success_UpdatesOrderAndSetsApproved()
     {
         // arrange
-        var order = new RentalOrderMongoDB { Id = "ap2", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.POS };
+        var order = new RentalOrderMongoDB { Id = "ap2", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.POS, TotalAmount = 1.00m };
         _repo.GetByStripeSessionIdAsync("sess-ap-ok").Returns(order);
 
         // payment client: GET returns Data = null, POST returns ApiResponse<string> with payment id
@@ -707,7 +716,7 @@ public class RentalOrderServiceTests
     public async Task ApprovePaymentAsync_Success_ManualChannel_Booked()
     {
         // arrange
-        var order = new RentalOrderMongoDB { Id = "ap-man", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.Manual };
+        var order = new RentalOrderMongoDB { Id = "ap-man", StoreId = 1, Status = RentalStatus.PendingPayment, Channel = OrderChannel.Manual, TotalAmount = 0.50m };
         _repo.GetByStripeSessionIdAsync("sess-ap-man").Returns(order);
 
         var paymentClient = new HttpClient(new PaymentHandler(getReturnsNull: true, postStatus: HttpStatusCode.OK, postPayload: "ap-man-pid")) { BaseAddress = new Uri("http://paymentservice") };
@@ -789,7 +798,7 @@ public class RentalOrderServiceTests
     public async Task ApprovePaymentAsync_NotPending_ThrowsAfterRecording()
     {
         // arrange: order exists but not in PendingPayment
-        var order = new RentalOrderMongoDB { Id = "ap-not-p", StoreId = 1, Status = RentalStatus.Rented, Channel = OrderChannel.POS };
+        var order = new RentalOrderMongoDB { Id = "ap-not-p", StoreId = 1, Status = RentalStatus.Rented, Channel = OrderChannel.POS, TotalAmount = 0.10m };
         _repo.GetByStripeSessionIdAsync("sess-not-p").Returns(order);
 
         // ensure no existing payments
