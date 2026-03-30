@@ -8,7 +8,6 @@ namespace HRS.API.Controllers;
 
 [ApiController]
 [Route("api/catalogs")]
-[Authorize]
 public class CatalogController : ControllerBase
 {
     private readonly ICatalogService _catalogService;
@@ -19,6 +18,7 @@ public class CatalogController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "read:order")]
     public async Task<ActionResult<CatalogResponseDto>> GetAvailability([FromQuery] GetCatalogRequestDto request)
     {
         var result = await _catalogService.GetStoreAvailabilityAsync(request.StartDate, request.EndDate, request.StoreId);
