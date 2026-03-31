@@ -41,13 +41,11 @@ spec:
                         value: "__MONGODB_CONNECTION_STRING__"
                       - name: MongoDB__DatabaseName
                         value: "__MONGODB_DATABASE_NAME__"
-                      # JWT Configuration
-                      - name: Jwt__Key
-                        value: "__JWT_SECRET_KEY__"
-                      - name: Jwt__Issuer
-                        value: "__JWT_ISSUER__"
-                      - name: Jwt__Audience
-                        value: "__JWT_AUDIENCE__"
+                      # Auth0 Configuration
+                      - name: Auth0__Domain
+                        value: "__AUTH0_DOMAIN__"
+                      - name: Auth0__Audience
+                        value: "__AUTH0_AUDIENCE__"
                       # CORS Configuration
                       - name: AllowedOrigins
                         value: "__ALLOWED_ORIGINS__"
