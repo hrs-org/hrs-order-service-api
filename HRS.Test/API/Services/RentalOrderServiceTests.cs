@@ -201,7 +201,7 @@ public class RentalOrderServiceTests
     [Fact]
     public async Task AssignStripeSessionIdAsync_UpdatesOrder()
     {
-        var order = new RentalOrderMongoDB { Id = "o1", StoreId = 1 };
+        var order = new RentalOrderMongoDB { Id = "o1", StoreId = 1, Status = RentalStatus.PendingPayment };
         _repo.GetByIdAsync("o1").Returns(order);
 
         await _service.AssignStripeSessionIdAsync("o1", "sess123");
