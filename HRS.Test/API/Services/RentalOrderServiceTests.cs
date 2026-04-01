@@ -39,6 +39,8 @@ public class RentalOrderServiceTests
         _availability = Substitute.For<IAvailabilityService>();
         _mapper = Substitute.For<IMapper>();
         _userService = Substitute.For<IUserContextService>();
+        // Most tests assume a valid store context. Default storeId to match test orders.
+        _userService.GetStoreId().Returns(1);
 
         var itemHandler = new HttpMessageHandlerStub();
         _itemClient = new HttpClient(itemHandler)
