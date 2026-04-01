@@ -211,6 +211,28 @@ public class RentalOrderServiceTests
     }
 
     [Fact]
+    public async Task AssignStripeSessionIdAsync_Throws_WhenOrderBelongsToDifferentStore()
+    {
+        var order = new RentalOrderMongoDB { Id = "o-store", StoreId = 1, Status = RentalStatus.PendingPayment };
+        _repo.GetByIdAsync("o-store").Returns(order);
+        _userService.GetStoreId().Returns(2);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.AssignStripeSessionIdAsync("o-store", "sess-x"));
+        await _repo.DidNotReceive().UpdateAsync(Arg.Any<RentalOrderMongoDB>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task AssignStripeSessionIdAsync_Throws_WhenOrderIsNotPendingPayment()
+    {
+        var order = new RentalOrderMongoDB { Id = "o-status", StoreId = 1, Status = RentalStatus.Booked };
+        _repo.GetByIdAsync("o-status").Returns(order);
+        _userService.GetStoreId().Returns(1);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.AssignStripeSessionIdAsync("o-status", "sess-y"));
+        await _repo.DidNotReceive().UpdateAsync(Arg.Any<RentalOrderMongoDB>(), Arg.Any<string>());
+    }
+
+    [Fact]
     public async Task ApproveAsync_Throws_WhenNotPending()
     {
         var order = new RentalOrderMongoDB { Id = "o1", Status = RentalStatus.Rented, StoreId = 1 };
@@ -352,6 +374,22 @@ public class RentalOrderServiceTests
 
         // act/assert
         await Assert.ThrowsAsync<DuplicateNameException>(() => _service.ApprovePaymentAsync("sess-exists", 200));
+    }
+
+    [Fact]
+    public async Task ApprovePaymentAsync_Throws_WhenOrderBelongsToDifferentStore()
+    {
+        var order = new RentalOrderMongoDB
+        {
+            Id = "o-pay-store",
+            StoreId = 1,
+            Status = RentalStatus.PendingPayment,
+            Channel = OrderChannel.POS
+        };
+        _repo.GetByStripeSessionIdAsync("sess-store-mismatch").Returns(order);
+        _userService.GetStoreId().Returns(2);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.ApprovePaymentAsync("sess-store-mismatch", 100));
     }
 
     [Fact]
