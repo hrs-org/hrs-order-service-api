@@ -264,6 +264,16 @@ public class RentalOrderService : IRentalOrderService
     {
         var order = await _rentalOrderMongoDBRepository.GetByIdAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
 
+        // Security: only assign Stripe sessions for orders in the caller's store
+        // to prevent cross-tenant/session tampering.
+        var storeId = _userContextService.GetStoreId();
+        if (order.StoreId != storeId)
+            throw new InvalidOperationException("Order does not belong to your store.");
+
+        // Security: only PendingPayment orders should receive a Stripe session id.
+        if (order.Status != RentalStatus.PendingPayment)
+            throw new InvalidOperationException("Only pending payment orders can receive Stripe session.");
+
         order.StripeSessionId = sessionId;
         await _rentalOrderMongoDBRepository.UpdateAsync(order, order.Id);
     }
@@ -274,6 +284,11 @@ public class RentalOrderService : IRentalOrderService
 
         var order = await _rentalOrderMongoDBRepository.GetByStripeSessionIdAsync(sessionId)
                     ?? throw new KeyNotFoundException(OrderNotFound);
+
+        // Security: only approve payments for orders in the caller's store.
+        var storeId = _userContextService.GetStoreId();
+        if (order.StoreId != storeId)
+            throw new InvalidOperationException("Order does not belong to your store.");
 
         var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
         var existingPayments = response?.Data;

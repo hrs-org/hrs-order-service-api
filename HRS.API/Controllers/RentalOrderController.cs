@@ -10,7 +10,6 @@ namespace HRS.API.Controllers;
 
 [ApiController]
 [Route("api/orders")]
-[Authorize]
 public class RentalOrderController : ControllerBase
 {
     private readonly IRentalOrderService _rentalOrderService;
@@ -21,6 +20,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = "read:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> GetById(string id)
     {
         var result = await _rentalOrderService.GetAsync(id);
@@ -28,7 +28,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "read:order")]
     public async Task<ActionResult<IEnumerable<RentalOrderListDto>>> GetAll()
     {
         var result = await _rentalOrderService.GetAllAsync();
@@ -36,7 +36,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpGet("bookings")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "read:order")]
     public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllBookings()
     {
         var bookingStatuses = new[] { RentalStatus.Pending, RentalStatus.Booked, RentalStatus.Cancelled };
@@ -45,7 +45,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpGet("rents")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "read:order")]
     public async Task<ActionResult<IEnumerable<RentalOrderResponseDto>>> GetAllRents()
     {
         var rentStatuses = new[] { RentalStatus.Rented };
@@ -55,7 +55,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "write:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> Create([FromBody] CreateRentalOrderRequestDto dto)
     {
         var result = await _rentalOrderService.CreateAsync(dto);
@@ -63,6 +63,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPut("{id}/approve-payment")]
+    [Authorize(Policy = "update:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> ApprovePayment([FromBody] ApprovePaymentRequest request)
     {
         var id = request.SessionId;
@@ -72,7 +73,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPut("{id}/approve")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "update:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> Approve(string id)
     {
         var result = await _rentalOrderService.ApproveAsync(id);
@@ -80,7 +81,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPut("{id}/cancel")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "update:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> CancelOrder(string id)
     {
         var result = await _rentalOrderService.CancelAsync(id);
@@ -88,7 +89,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPut("{id}/confirm")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "update:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> MarkAsRented(string id)
     {
         var result = await _rentalOrderService.MarkAsRentedAsync(id);
@@ -96,7 +97,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPut("{id}/return")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "update:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> Return(string id, [FromBody] ReturnRentalOrderRequestDto dto)
     {
         var result = await _rentalOrderService.ReturnAsync(id, dto);
@@ -104,7 +105,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPut("{id}/close")]
-    [Authorize(Roles = "Employee,Manager,Admin")]
+    [Authorize(Policy = "update:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> Close(string id)
     {
         var result = await _rentalOrderService.CloseAsync(id);
@@ -112,6 +113,7 @@ public class RentalOrderController : ControllerBase
     }
 
     [HttpPost("/api/orders/assign-stripe-sessionid/{orderId}")]
+    [Authorize(Policy = "update:order")]
     public async Task<ActionResult<RentalOrderResponseDto>> AssignStripeSessionId([FromBody] AssignStripeSessionRequest request)
     {
         var id = request.OrderId;

@@ -20,10 +20,7 @@ public class UserContextService : IUserContextService
 
     public int GetUserId()
     {
-        var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                         ?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value
-                         ?? _httpContextAccessor.HttpContext?.User?.FindFirst("userId")?.Value;
-
+        var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst("userId")?.Value;
         return int.TryParse(userIdClaim, out var userId) ? userId : 0;
     }
 
@@ -82,6 +79,8 @@ public class UserContextService : IUserContextService
     }
     public int GetStoreId()
     {
-        return int.Parse(_httpContextAccessor.HttpContext?.User?.FindFirst("storeId")?.Value ?? "0");
+        var storeIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst("storeId")?.Value;
+        return int.TryParse(storeIdClaim, out var storeId) ? storeId : 0;
     }
+
 }

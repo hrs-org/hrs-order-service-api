@@ -536,7 +536,8 @@ jobs:
                   ACR_NAME: ${{ secrets.ACR_NAME }}
                   MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING || 'mongodb://localhost:27017/hrsdb-order?authSource=admin' }}
                   MONGODB_DATABASE_NAME: ${{ secrets.MONGODB_DATABASE_NAME || 'hrsdb-order' }}
-                  JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+                  AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+                  AUTH0_AUDIENCE: ${{ secrets.AUTH0_AUDIENCE }}
                   ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS || 'http://localhost:4200' }}
                   ITEM_MAINTENANCE_SERVICE: ${{ secrets.ITEM_MAINTENANCE_SERVICE || 'http://localhost:5001' }}
                   PAYMENT_SERVICE: ${{ secrets.PAYMENT_SERVICE || 'http://localhost:5010' }}
@@ -560,9 +561,8 @@ jobs:
                     -e ASPNETCORE_ENVIRONMENT=Production \
                     -e ConnectionStrings__DefaultConnectionMongoDB="$MONGODB_CONNECTION_STRING" \
                     -e MongoDB__DatabaseName="$MONGODB_DATABASE_NAME" \
-                    -e Jwt__Key="$JWT_SECRET_KEY" \
-                    -e Jwt__Issuer="HRSApp" \
-                    -e Jwt__Audience="HRSUsers" \
+                    -e Auth0__Domain="$AUTH0_DOMAIN" \
+                    -e Auth0__Audience="$AUTH0_AUDIENCE" \
                     -e AllowedOrigins="$ALLOWED_ORIGINS" \
                     -e ItemMaintenanceService="$ITEM_MAINTENANCE_SERVICE" \
                     -e PaymentService="$PAYMENT_SERVICE" \
