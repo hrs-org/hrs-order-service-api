@@ -7,7 +7,6 @@ metadata:
         app: hrs-order-service
         environment: uat
 ---
-automountServiceAccountToken: false
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -123,6 +122,7 @@ metadata:
     namespace: uat
     labels:
         app: hrs-order-service
+automountServiceAccountToken: false
 spec:
     type: ClusterIP
     ports:
