@@ -290,8 +290,10 @@ public class RentalOrderService : IRentalOrderService
 
         // Security: only approve payments for orders in the caller's store.
         var storeId = _userContextService.GetStoreId();
-        if (order.StoreId != storeId)
-            throw new InvalidOperationException("Order does not belong to your store.");
+
+        if (storeId > 0)
+            if (order.StoreId != storeId)
+                throw new InvalidOperationException("Order does not belong to your store.");
 
         var response = await _paymentClient.GetFromJsonAsync<ApiResponse<object>>($"/api/payments/orders/{order.Id}"); // Adjust the endpoint as necessary
         var existingPayments = response?.Data;
