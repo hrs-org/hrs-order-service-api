@@ -269,7 +269,7 @@ public class RentalOrderService : IRentalOrderService
         var storeId = _userContextService.GetStoreId();
 
         // Customers may not have storeId claim (returns 0), so skip store ownership check for them.
-        if (storeId >= 0)
+        if (storeId > 0)
             if (order.StoreId != storeId)
                 throw new InvalidOperationException("Order does not belong to your store.");
 
