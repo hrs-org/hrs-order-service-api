@@ -267,8 +267,11 @@ public class RentalOrderService : IRentalOrderService
         // Security: only assign Stripe sessions for orders in the caller's store
         // to prevent cross-tenant/session tampering.
         var storeId = _userContextService.GetStoreId();
-        if (order.StoreId != storeId)
-            throw new InvalidOperationException("Order does not belong to your store.");
+
+        // Customers may not have storeId claim (returns 0), so skip store ownership check for them.
+        if (storeId >= 0)
+            if (order.StoreId != storeId)
+                throw new InvalidOperationException("Order does not belong to your store.");
 
         // Security: only PendingPayment orders should receive a Stripe session id.
         if (order.Status != RentalStatus.PendingPayment)
